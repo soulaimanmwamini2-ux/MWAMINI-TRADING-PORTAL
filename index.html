@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // --- SMART ROUTING & NAVIGATIONAL HOOK ---
+    // --- SMART ROUTING & NAVIGATIONAL HOOK UPGRADE ---
     if (window.location.pathname.includes("admin.html")) {
         // Run core system metrics collections inside the Admin Portal
         loadAnalyticsDashboard();
@@ -11,16 +11,14 @@ document.addEventListener("DOMContentLoaded", () => {
         setupNavigationListeners();
         setupAdminSearchFilters();
     } else {
-        // We are on the public storefront page! Intercept the Admin Login button click cleanly
-        const triggerElements = document.querySelectorAll('button, a, .btn');
-        triggerElements.forEach(element => {
-            if (element.textContent.trim().includes("Admin Login")) {
-                element.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    window.location.href = "admin.html"; // Redirect straight to the admin workspace
-                });
-            }
-        });
+        // We are on the public storefront page! Let's activate the Admin Login button hook
+        const adminLoginButton = document.querySelector('.btn, button');
+        if (adminLoginButton && adminLoginButton.textContent.includes("Admin Login")) {
+            adminLoginButton.addEventListener("click", (e) => {
+                e.preventDefault();
+                window.location.href = "admin.html"; // Smoothly fly into the System Overseer control panel
+            });
+        }
     }
 });
 
@@ -74,16 +72,18 @@ function switchTab(tabId, clickedButton) {
     }
 }
 
-// --- ADVANCED ANALYTICS & FINANCIAL INTELLIGENCE ---
+// --- UPGRADE 1: ADVANCED ANALYTICS & FINANCIAL INTELLIGENCE ---
 async function loadAnalyticsDashboard() {
     if(!window.supabase) return;
     try {
+        // Fetch all data rows required for continuous financial metrics valuation aggregations
         const { data: globalProducts } = await window.supabase.from('products').select('*');
         const { data: globalOrders } = await window.supabase.from('orders').select('*');
 
         const skuCount = globalProducts ? globalProducts.length : 0;
         const orderCount = globalOrders ? globalOrders.length : 0;
 
+        // Calculate precise portfolio inventory valuation weights
         let aggregatedTotalValuationUSD = 0;
         if(globalProducts) {
             globalProducts.forEach(item => {
@@ -93,6 +93,7 @@ async function loadAnalyticsDashboard() {
             });
         }
 
+        // Render calculated calculations into dashboard text panels dynamically
         if(document.getElementById("metric-stock")) {
             document.getElementById("metric-stock").innerHTML = `
                 <div style="font-size:24px; font-weight:700;">${skuCount} Active SKUs</div>
@@ -106,6 +107,7 @@ async function loadAnalyticsDashboard() {
             document.getElementById("metric-orders").innerText = orderCount;
         }
 
+        // Project real-time database orders quantities directly onto linear chart maps
         renderDynamicSalesChart(globalOrders || []);
 
     } catch (err) {
@@ -165,7 +167,7 @@ function renderDynamicSalesChart(ordersData) {
     });
 }
 
-// --- BULK DATA UTILITIES & SEARCH OPTIMIZATION LAYER ---
+// --- UPGRADE 3: BULK DATA UTILITIES & SEARCH OPTIMIZATION LAYER ---
 function setupAdminSearchFilters() {
     const filterContainer = document.createElement("div");
     filterContainer.style = "display:flex; gap:1rem; margin-bottom:1.5rem; background:var(--bg-surface); padding:1rem; border-radius:8px; border:1px solid var(--border-color);";
@@ -244,11 +246,13 @@ function renderInventoryRowsHTML(skusList) {
             ? `${sku.price?.toLocaleString()} RWF` 
             : `$${sku.price?.toLocaleString()}`;
 
+        // LOW-STOCK ALERT SHADING
         const runningLowWarningHighlightStyle = (sku.quantity <= 3) ? "background-color: #fef2f2; color: #991b1b; font-weight:700;" : "";
 
         const row = document.createElement("tr");
         if(runningLowWarningHighlightStyle) row.style = runningLowWarningHighlightStyle;
 
+        // Clean string conversions before injection into the onclick handler to avoid broken quotes
         const safelyEscapedSkuJSON = JSON.stringify(sku).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
         row.innerHTML = `
@@ -282,6 +286,7 @@ function initializeSKUUpdateMatrix(sku) {
     document.getElementById("sku-qty").value = sku.quantity || 0;
     document.getElementById("sku-status").value = sku.status;
     
+    // Auto-select match on the upgraded category logic form element
     const categorySelector = document.getElementById("sku-category");
     if (categorySelector) {
         categorySelector.value = sku.category;
@@ -386,6 +391,7 @@ document.getElementById("sku-management-form")?.addEventListener("submit", async
     }
 });
 
+// --- CRITICAL FIXED: DELETE ENGINE ---
 async function purgeSKU(id) {
     if (!id || id === 'undefined') {
         alert("Error: Invalid or unmapped item ID structure framework tracking vector.");
@@ -401,6 +407,7 @@ async function purgeSKU(id) {
 
             if (!error) {
                 alert("Commodity item purged successfully from storage manifest.");
+                // Immediately force reload arrays internally to prevent caching display anomalies
                 await loadInventoryControlMatrix();
                 await loadAnalyticsDashboard();
             } else {
@@ -412,6 +419,7 @@ async function purgeSKU(id) {
     }
 }
 
+// --- UPGRADE 2: LIVE ORDER MANAGEMENT OPERATIONS ---
 async function loadOrdersQueue() {
     if(!window.supabase) return;
     const { data: orders, error } = await window.supabase.from('orders').select('*').order('created_at', { ascending: false });
