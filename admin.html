@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Center - Mwamini Trading</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-hover: #1d4ed8;
+            --accent: #059669;
+            --danger: #ef4444;
+            --bg-main: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --text-dark: #0f172a;
+            --border: #e2e8f0;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Dashboard Sidebar Navigation Layout */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-button {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(30, 64, 175, 0.1);
+        }
+
+        .nav-button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .nav-button.btn-danger {
+            background: var(--danger);
+            margin-top: auto;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+        }
+
+        .nav-button.btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* Central Panel Core Workspaces */
+        .main-content {
+            flex-grow: 1;
+            padding: 2.5rem;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .workspace-section {
+            display: none;
+        }
+
+        .workspace-section.active-view {
+            display: block;
+        }
+
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .view-header h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin: 0;
+            color: var(--text-dark);
+        }
+
+        /* Global UI Buttons & Badges */
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        .btn-action:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--accent); }
+        .btn-success:hover { background: #047857; }
+
+        /* Generic Presentation Layout Tables */
+        .data-table-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .admin-table th {
+            background: #f8fafc;
+            padding: 1rem 1.25rem;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .media-preview-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        /* Settings Config Card Grid */
+        .config-grid-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 700px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+        }
+
+        .form-row-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .admin-input-control {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            background: #fff;
+        }
+
+        .admin-input-control:focus {
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2 class="sidebar-brand">System Overseer</h2>
+        <ul class="nav-menu">
+            <li><button class="nav-button" onclick="switchToSection('panel-analytics')">System Analytics</button></li>
+            <li><button class="nav-button" onclick="switchToSection('panel-inventory')">Commodity Inventory Control</button></li>
+            <li><button class="nav-button" onclick="switchToSection('panel-orders')">Stock Information</button></li>
+            <li><button class="nav-button" onclick="switchToSection('panel-settings')">Administrative Actions</button></li>
+            <li><button class="nav-button" onclick="switchToSection('panel-comments')">Customer comments</button></li>
+            <li><button class="nav-button btn-danger" onclick="executeSecureSignout()">Terminate Session</button></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+
+        <section id="panel-analytics" class="workspace-section active-view">
+            <div class="view-header">
+                <h1>System Analytics Overview</h1>
+            </div>
+            <p style="color:#64748b;">Real-time enterprise metrics dashboard visualization.</p>
+        </section>
+
+        <section id="panel-inventory" class="workspace-section">
+            <div class="view-header">
+                <h1>Commodity Inventory Control</h1>
+                <button class="btn-action btn-success" onclick="alert('Open registration module')">+ Register New Commodity</button>
+            </div>
+            
+            <div class="data-table-card">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Media View</th>
+                            <th>Commodity Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Stock Status</th>
+                            <th>Actions Matrix</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body">
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:#64748b; padding:2rem;">Polling warehouse arrays...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="panel-orders" class="workspace-section">
+            <div class="view-header">
+                <h1>Stock Information & Freight Requests</h1>
+            </div>
+            
+            <div class="data-table-card">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID Ref</th>
+                            <th>Commodity</th>
+                            <th>Units</th>
+                            <th>Client / Account</th>
+                            <th>Contact Phone</th>
+                            <th>Offload Address</th>
+                            <th>Routing Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table-body">
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:#64748b; padding:2rem;">No active manifest orders queued within standard processing loops.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="panel-settings" class="workspace-section">
+            <div class="view-header">
+                <h1>Administrative Actions</h1>
+            </div>
+            
+            <div class="config-grid-card">
+                <h3 style="margin-top:0; color:var(--primary); font-size:18px;">System Configuration Variables</h3>
+                <p style="font-size:13px; color:#64748b; margin-bottom:2rem;">Update real-time public communication targets safely registered across the global interface.</p>
+                
+                <form id="admin-settings-form">
+                    <div class="form-row-split">
+                        <div class="form-group">
+                            <label>Corporate Support Hotline Phone</label>
+                            <input type="text" id="sys-phone" class="admin-input-control" placeholder="e.g. 0785696336">
+                        </div>
+                        <div class="form-group">
+                            <label>Central Helpdesk Operations Email</label>
+                            <input type="email" id="sys-email" class="admin-input-control" placeholder="e.g. support@mwamini.com">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-action">Save Routing Settings</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="panel-comments" class="workspace-section">
+            <div class="view-header">
+                <h1>Customer Comments & Appraisals</h1>
+            </div>
+            
+            <div class="data-table-card">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Enterprise Author</th>
+                            <th>Rating Matrix</th>
+                            <th>Verbatim Feedback Payload</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comments-table-body">
+                        <tr>
+                            <td colspan="3" style="text-align:center; color:#64748b; padding:2rem;">Awaiting client review streams.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="supabase-config.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (window.supabase) {
+                pullInventoryManifest();
+                pullOrderManifest();
+                pullSystemSettingsManifest();
+                pullReviewsFeedbackManifest();
+            }
+            
+            document.getElementById("admin-settings-form")?.addEventListener("submit", broadcastSystemSettingsUpdate);
+        });
+
+        // UI Section Nav Switching Engine
+        function switchToSection(targetSectionId) {
+            document.querySelectorAll(".workspace-section").forEach(sec => {
+                sec.classList.remove("active-view");
+            });
+            const target = document.getElementById(targetSectionId);
+            if(target) target.classList.add("active-view");
+        }
+
+        // Live Real-Time Storage Array Streams Polling Loops
+        async function pullInventoryManifest() {
+            const tableBody = document.getElementById("inventory-table-body");
+            if (!tableBody || !window.supabase) return;
+
+            const { data, error } = await window.supabase.from('products').select('*');
+            if (error || !data) {
+                tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#ef4444;">Failed to fetch dynamic inventory records.</td></tr>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b;">No products found inside database storage blocks.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            data.forEach(item => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><img src="${item.image_url || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=50&auto=format&fit=crop'}" class="media-preview-box"></td>
+                        <td style="font-weight:700; color:#1e293b;">${item.title || 'Data'}</td>
+                        <td style="color:#475569;">${item.category || 'N/A'}</td>
+                        <td style="font-weight:700; color:#1e40af;">${item.price?.toLocaleString()} ${item.currency || 'RWF'}</td>
+                        <td><span class="status-badge">${item.stock_status || 'In Stock'}</span></td>
+                        <td>
+                            <button class="btn-action btn-success" style="padding: 0.35rem 0.75rem; font-size:12px;" onclick="alert('Edit implementation triggered for id: ${item.id}')">Edit</button>
+                            <button class="btn-action" style="background:#ef4444; padding: 0.35rem 0.75rem; font-size:12px;" onclick="alert('Delete module fallback triggered for id: ${item.id}')">Delete</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        async function pullOrderManifest() {
+            const tableBody = document.getElementById("orders-table-body");
+            if (!tableBody || !window.supabase) return;
+
+            const { data, error } = await window.supabase.from('orders').select('*');
+            if (error || !data || data.length === 0) return;
+
+            tableBody.innerHTML = "";
+            data.forEach(order => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td style="font-family:monospace; color:#64748b; font-size:12px;">${order.id.slice(0,8)}...</td>
+                        <td style="font-weight:600;">${order.product_title || 'Commodity'}</td>
+                        <td><strong>${order.quantity}</strong></td>
+                        <td>${order.customer_name || 'N/A'}</td>
+                        <td>${order.phone_number || 'N/A'}</td>
+                        <td style="font-size:13px; color:#475569; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${order.delivery_location || 'N/A'}</td>
+                        <td><span class="status-badge" style="background:#fef3c7; color:#d97706;">${order.status || 'Pending'}</span></td>
+                    </tr>`;
+            });
+        }
+
+        async function pullSystemSettingsManifest() {
+            if (!window.supabase) return;
+            const { data, error } = await window.supabase.from('system_settings').select('*').single();
+            if (!error && data) {
+                if (data.support_phone) document.getElementById("sys-phone").value = data.support_phone;
+                if (data.support_email) document.getElementById("sys-email").value = data.support_email;
+            }
+        }
+
+        async function pullReviewsFeedbackManifest() {
+            const tableBody = document.getElementById("comments-table-body");
+            if (!tableBody || !window.supabase) return;
+
+            const { data, error } = await window.supabase.from('reviews').select('*');
+            if (error || !data || data.length === 0) return;
+
+            tableBody.innerHTML = "";
+            data.forEach(rev => {
+                let stars = "⭐".repeat(rev.rating || 5);
+                tableBody.innerHTML += `
+                    <tr>
+                        <td style="font-weight:600;">${rev.author || 'Anonymous'}</td>
+                        <td><span style="color:#f59e0b;">${stars}</span></td>
+                        <td style="color:#475569; font-style:italic;">"${rev.feedback || ''}"</td>
+                    </tr>`;
+            });
+        }
+
+        async function broadcastSystemSettingsUpdate(e) {
+            e.preventDefault();
+            if (!window.supabase) return;
+
+            const freshPhone = document.getElementById("sys-phone").value.trim();
+            const freshEmail = document.getElementById("sys-email").value.trim();
+
+            const { error } = await window.supabase
+                .from('system_settings')
+                .insert([{ support_phone: freshPhone, support_email: freshEmail }]);
+
+            if (error) {
+                alert(`Override configuration rejected: ${error.message}`);
+            } else {
+                alert("Corporate system settings successfully broadcasted.");
+            }
+        }
+
+        function executeSecureSignout() {
+            alert("Administrative session terminated successfully.");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

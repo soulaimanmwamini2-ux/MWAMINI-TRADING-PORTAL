@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Authentication - Mwamini Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Added smooth transition for security UI switch */
+        #login-form { transition: opacity 0.3s ease; }
+    </style>
+</head>
+<body style="display:flex; justify-content:center; align-items:center; height:100vh; background-color: #f8fafc;">
+    
+    <div class="modal-content" style="box-shadow: 0 10px 25px rgba(0,0,0,0.05); background: white; padding: 2.5rem; border-radius:20px; width: 90%; max-width: 450px;">
+        
+        <div id="gatekeeper-step">
+            <h2 style="margin-bottom:1.5rem; text-align:center; font-family: sans-serif; color: #0f172a;">Terminal Access Key</h2>
+            <input type="password" id="access-key" class="search-input" placeholder="Enter security key..." style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:1.25rem; box-sizing:border-box;">
+            <button id="verify-key-btn" style="width:100%; padding:0.75rem; background:#0f172a; color:white; border:none; border-radius:10px; font-weight:600; cursor:pointer;">Authorize Access</button>
+        </div>
+
+        <form id="login-form" style="display: none;">
+            <h2 style="margin-bottom:1.5rem; text-align:center; font-family: sans-serif; color: #0f172a;">Secure System Terminal</h2>
+            <label style="display:block; margin-bottom:0.5rem; font-family:sans-serif; color:#64748b; font-size:14px;">Master Administrative Email</label>
+            <input type="email" id="email" class="search-input" style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:1.25rem; box-sizing:border-box;" required>
+            
+            <label style="display:block; margin-bottom:0.5rem; font-family:sans-serif; color:#64748b; font-size:14px;">Access Code / Password</label>
+            <input type="password" id="password" class="search-input" style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:1.5rem; box-sizing:border-box;" required>
+            
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:0.75rem; background:#2563eb; color:white; border:none; border-radius:10px; font-weight:600; cursor:pointer;">Establish Session Protocol</button>
+        </form>
+        
+        <p id="error-msg" aria-live="polite" style="color:#ef4444; font-size:14px; margin-top:1.25rem; text-align:center; font-family:sans-serif; min-height:20px;"></p>
+    </div>
+
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>

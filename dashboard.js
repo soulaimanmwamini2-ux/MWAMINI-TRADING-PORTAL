@@ -1,0 +1,513 @@
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.location.pathname.includes("admin.html")) {
+        // Run core system metrics collections
+        loadAnalyticsDashboard();
+        loadInventoryControlMatrix();
+        loadOrdersQueue();
+        initializeRealtimeChannels();
+
+        // Bind navigational hooks directly to DOM nodes
+        setupNavigationListeners();
+        setupAdminSearchFilters();
+    }
+});
+
+// Cache storage array buckets to optimize search operations locally
+let localAdminInventoryCache = [];
+const conversionAnchorRates = { USD: 1, RWF: 1290 };
+
+function setupNavigationListeners() {
+    const navButtons = document.querySelectorAll('.sidebar .btn:not(#logout-btn)');
+    
+    // Set initial structural UI focus on the first analytics panel tab button
+    if (navButtons.length > 0) {
+        navButtons[0].classList.add('active-tab');
+        const initialPanel = document.getElementById('analytics-view');
+        if (initialPanel) initialPanel.classList.add('active-panel');
+    }
+
+    navButtons.forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+            let destinationPanelId = 'analytics-view';
+            if (index === 1) destinationPanelId = 'inventory-view';
+            if (index === 2) destinationPanelId = 'orders-view';
+
+            switchTab(destinationPanelId, btn);
+        });
+    });
+}
+
+function switchTab(tabId, clickedButton) {
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active-panel');
+    });
+
+    document.querySelectorAll('.sidebar .btn').forEach(btn => {
+        btn.classList.remove('active-tab');
+    });
+
+    const targetPanel = document.getElementById(tabId);
+    if (targetPanel) {
+        targetPanel.classList.add('active-panel');
+    }
+
+    if (clickedButton) {
+        clickedButton.classList.add('active-tab');
+    }
+
+    if (tabId === 'inventory-view') {
+        loadInventoryControlMatrix();
+    } else if (tabId === 'orders-view') {
+        loadOrdersQueue();
+    }
+}
+
+// --- UPGRADE 1: ADVANCED ANALYTICS & FINANCIAL INTELLIGENCE ---
+async function loadAnalyticsDashboard() {
+    if(!window.supabase) return;
+    try {
+        // Fetch all data rows required for continuous financial metrics valuation aggregations
+        const { data: globalProducts } = await window.supabase.from('products').select('*');
+        const { data: globalOrders } = await window.supabase.from('orders').select('*');
+
+        const skuCount = globalProducts ? globalProducts.length : 0;
+        const orderCount = globalOrders ? globalOrders.length : 0;
+
+        // Calculate precise portfolio inventory valuation weights
+        let aggregatedTotalValuationUSD = 0;
+        if(globalProducts) {
+            globalProducts.forEach(item => {
+                const isRwf = item.description && item.description.includes("[CURRENCY:RWF]");
+                const priceInUSD = isRwf ? (item.price / conversionAnchorRates.RWF) : item.price;
+                aggregatedTotalValuationUSD += (priceInUSD * (item.quantity || 0));
+            });
+        }
+
+        // Render calculated calculations into dashboard text panels dynamically
+        if(document.getElementById("metric-stock")) {
+            document.getElementById("metric-stock").innerHTML = `
+                <div style="font-size:24px; font-weight:700;">${skuCount} Active SKUs</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                    Asset Value: $${Math.round(aggregatedTotalValuationUSD).toLocaleString()} / 
+                    ${Math.round(aggregatedTotalValuationUSD * conversionAnchorRates.RWF).toLocaleString()} RWF
+                </div>
+            `;
+        }
+        if(document.getElementById("metric-orders")) {
+            document.getElementById("metric-orders").innerText = orderCount;
+        }
+
+        // Project real-time database orders quantities directly onto linear chart maps
+        renderDynamicSalesChart(globalOrders || []);
+
+    } catch (err) {
+        console.error("Analytics metrics gather fault:", err);
+    }
+}
+
+function renderDynamicSalesChart(ordersData) {
+    const canvas = document.getElementById('salesChart');
+    if(!canvas || typeof Chart === 'undefined') return;
+
+    const weekdayDistributionCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
+    const weekdayMapIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    ordersData.forEach(order => {
+        if(order.created_at) {
+            const dateObj = new Date(order.created_at);
+            const dayLabel = weekdayMapIndex[dateObj.getDay()];
+            if(weekdayDistributionCounts[dayLabel] !== undefined) {
+                weekdayDistributionCounts[dayLabel] += (order.quantity || 1);
+            }
+        }
+    });
+
+    const ctx = canvas.getContext('2d');
+    
+    if(window.activeDashboardChartInstance) {
+        window.activeDashboardChartInstance.destroy();
+    }
+
+    window.activeDashboardChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Live Real-time Order Volumetric Demand Metrics',
+                data: [
+                    weekdayDistributionCounts['Mon'],
+                    weekdayDistributionCounts['Tue'],
+                    weekdayDistributionCounts['Wed'],
+                    weekdayDistributionCounts['Thu'],
+                    weekdayDistributionCounts['Fri'],
+                    weekdayDistributionCounts['Sat'],
+                    weekdayDistributionCounts['Sun']
+                ],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: true, position: 'top' } }
+        }
+    });
+}
+
+// --- UPGRADE 3: BULK DATA UTILITIES & SEARCH OPTIMIZATION LAYER ---
+function setupAdminSearchFilters() {
+    const filterContainer = document.createElement("div");
+    filterContainer.style = "display:flex; gap:1rem; margin-bottom:1.5rem; background:var(--bg-surface); padding:1rem; border-radius:8px; border:1px solid var(--border-color);";
+    filterContainer.innerHTML = `
+        <input type="text" id="admin-search-box" placeholder="Filter live stock records table instantly..." style="flex:2; padding:0.5rem; border:1px solid var(--border-color); border-radius:6px;">
+        <select id="admin-category-box" style="flex:1; padding:0.5rem; border:1px solid var(--border-color); border-radius:6px;">
+            <option value="All">All Live Categories</option>
+            <option value="Grains">Grains (Salt, Rice, Sugar)</option>
+            <option value="Agriculture">Agriculture & Farming Tools</option>
+            <option value="Construction">Construction Materials</option>
+            <option value="Electronics">Industrial Electronics</option>
+        </select>
+    `;
+
+    const inventoryViewPanel = document.getElementById("inventory-view");
+    if(inventoryViewPanel) {
+        const targetTable = inventoryViewPanel.querySelector("table");
+        if(targetTable) {
+            targetTable.parentNode.insertBefore(filterContainer, targetTable);
+        }
+    }
+
+    const runFilteringExecution = () => {
+        const query = document.getElementById("admin-search-box")?.value.toLowerCase().trim() || "";
+        const categorySelection = document.getElementById("admin-category-box")?.value || "All";
+
+        const filteredRows = localAdminInventoryCache.filter(item => {
+            const matchesText = item.title.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
+            const matchesCategory = (categorySelection === "All" || item.category === categorySelection);
+            return matchesText && matchesCategory;
+        });
+
+        renderInventoryRowsHTML(filteredRows);
+    };
+
+    document.getElementById("admin-search-box")?.addEventListener("input", runFilteringExecution);
+    document.getElementById("admin-category-box")?.addEventListener("change", runFilteringExecution);
+}
+
+async function loadInventoryControlMatrix() {
+    if(!window.supabase) return;
+    const { data: skus, error } = await window.supabase.from('products').select('*').order('created_at', { ascending: false });
+    
+    if (!error && skus) {
+        localAdminInventoryCache = skus;
+        renderInventoryRowsHTML(localAdminInventoryCache);
+    } else {
+        const tbody = document.getElementById("sku-table-body");
+        if(tbody) tbody.innerHTML = `<tr><td colspan="6" style="padding:1rem; text-align:center; color:#ef4444;">Failed to sync stock records: ${error.message}</td></tr>`;
+    }
+}
+
+function renderInventoryRowsHTML(skusList) {
+    const tbody = document.getElementById("sku-table-body");
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    if (skusList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:1rem; text-align:center; color:var(--text-muted);">No matched commodities structural listings match these query conditions.</td></tr>`;
+        return;
+    }
+
+    skusList.forEach(sku => {
+        let renderedMediaHTML = `<span style="color:var(--text-muted); font-size:12px;">No File</span>`;
+        
+        if (sku.image_url) {
+            const absoluteAssetUrl = sku.image_url.startsWith('http') 
+                ? sku.image_url 
+                : window.supabase.storage.from('product-assets').getPublicUrl(sku.image_url).data.publicUrl;
+            
+            renderedMediaHTML = `<img src="${absoluteAssetUrl}" style="width:45px; height:45px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);" onerror="this.parentElement.innerHTML='⚠️ Link Error'">`;
+        }
+
+        const activeCurrencyLabel = sku.description && sku.description.includes("[CURRENCY:RWF]") ? "RWF" : "$";
+        const formattedPriceDisplay = activeCurrencyLabel === "RWF" 
+            ? `${sku.price?.toLocaleString()} RWF` 
+            : `$${sku.price?.toLocaleString()}`;
+
+        // LOW-STOCK ALERT SHADING
+        const runningLowWarningHighlightStyle = (sku.quantity <= 3) ? "background-color: #fef2f2; color: #991b1b; font-weight:700;" : "";
+
+        const row = document.createElement("tr");
+        if(runningLowWarningHighlightStyle) row.style = runningLowWarningHighlightStyle;
+
+        // Clean string conversions before injection into the onclick handler to avoid broken quotes
+        const safelyEscapedSkuJSON = JSON.stringify(sku).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        row.innerHTML = `
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); text-align:center;">${renderedMediaHTML}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); font-weight:600;">${sku.title}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color);">${sku.category}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); font-weight:700; color:var(--accent);">${formattedPriceDisplay}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color);">
+                <span class="badge" style="position:static; background:#64748b; margin-right:8px;">${sku.status}</span>
+                <span style="font-size:12px; font-weight:600;">(${sku.quantity || 0} left)</span>
+            </td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); text-align:center;">
+                <div style="display:flex; gap:0.5rem; justify-content:center;">
+                    <button class="btn" style="width:auto; padding:6px 12px; margin:0; font-size:12px; background:#10b981; color:white; border-radius:6px;" onclick="initializeSKUUpdateMatrix(${safelyEscapedSkuJSON})">Edit</button>
+                    <button class="btn" style="width:auto; padding:6px 12px; margin:0; font-size:12px; background:#ef4444; color:white; border-radius:6px;" onclick="purgeSKU('${sku.id}')">Delete</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function initializeSKUUpdateMatrix(sku) {
+    const container = document.getElementById("product-form-container");
+    if (!container) return;
+    
+    container.style.display = "block";
+    document.getElementById("sku-id").value = sku.id;
+    document.getElementById("sku-title").value = sku.title;
+    document.getElementById("sku-price").value = sku.price;
+    document.getElementById("sku-qty").value = sku.quantity || 0;
+    document.getElementById("sku-status").value = sku.status;
+    
+    // Auto-select match on the upgraded category logic form element
+    const categorySelector = document.getElementById("sku-category");
+    if (categorySelector) {
+        categorySelector.value = sku.category;
+    }
+    
+    const fileInput = document.getElementById("sku-file");
+    if (fileInput) {
+        fileInput.dataset.existingUrl = sku.image_url || "";
+    }
+
+    if (sku.description) {
+        document.getElementById("sku-desc").value = sku.description.replace(/\[CURRENCY:\w+\]/g, "").trim();
+        const currencySelector = document.getElementById("sku-currency-type");
+        if (currencySelector) {
+            currencySelector.value = sku.description.includes("[CURRENCY:RWF]") ? "RWF" : "USD";
+        }
+    } else {
+        document.getElementById("sku-desc").value = "";
+    }
+    
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function openNewProductForm() {
+    const container = document.getElementById("product-form-container");
+    if (container) {
+        if(container.style.display === 'none' || !container.style.display) {
+            document.getElementById("sku-management-form").reset();
+            document.getElementById("sku-id").value = "";
+            
+            const fileInput = document.getElementById("sku-file");
+            if(fileInput) fileInput.removeAttribute('data-existing-url');
+
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+}
+
+document.getElementById("sku-management-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if(!window.supabase) return;
+    
+    const fileInput = document.getElementById("sku-file");
+    const existingId = document.getElementById("sku-id").value;
+    let assetUrl = fileInput?.dataset.existingUrl || "";
+
+    if(fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const filePath = `images/${fileName}`;
+
+        const { error: uploadError } = await window.supabase.storage
+            .from('product-assets')
+            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+        if(!uploadError) {
+            const { data: urlData } = window.supabase.storage.from('product-assets').getPublicUrl(filePath);
+            assetUrl = urlData.publicUrl;
+        } else {
+            alert(`File transfer failure: ${uploadError.message}`);
+            return;
+        }
+    }
+
+    const currencyType = document.getElementById("sku-currency-type")?.value || "USD";
+    const cleanDescription = document.getElementById("sku-desc").value;
+    const specializedPayloadDescription = `${cleanDescription} [CURRENCY:${currencyType}]`;
+
+    const payload = {
+        title: document.getElementById("sku-title").value,
+        price: parseFloat(document.getElementById("sku-price").value),
+        category: document.getElementById("sku-category").value,
+        quantity: parseInt(document.getElementById("sku-qty").value) || 0,
+        status: document.getElementById("sku-status").value,
+        description: specializedPayloadDescription,
+        image_url: assetUrl || null
+    };
+
+    let error;
+    if (existingId) {
+        const { error: updateError } = await window.supabase.from('products').update(payload).eq('id', existingId);
+        error = updateError;
+    } else {
+        const { error: insertError } = await window.supabase.from('products').insert([payload]);
+        error = insertError;
+    }
+
+    if(!error) {
+        alert(existingId ? "Product updated successfully into public registry." : "Product listed successfully into public catalog registry.");
+        document.getElementById("sku-management-form").reset();
+        document.getElementById("sku-id").value = "";
+        if(fileInput) fileInput.removeAttribute('data-existing-url');
+        
+        openNewProductForm();
+        loadInventoryControlMatrix();
+        loadAnalyticsDashboard();
+    } else {
+        alert(`Failed to save record: ${error.message}`);
+    }
+});
+
+// --- CRITICAL FIXED: DELETE ENGINE ---
+async function purgeSKU(id) {
+    if (!id || id === 'undefined') {
+        alert("Error: Invalid or unmapped item ID structure framework tracking vector.");
+        return;
+    }
+    
+    if (confirm("Confirm structural deletion of this item from inventory records? This action cannot be undone.")) {
+        try {
+            const { error } = await window.supabase
+                .from('products')
+                .delete()
+                .eq('id', id);
+
+            if (!error) {
+                alert("Commodity item purged successfully from storage manifest.");
+                // Immediately force reload arrays internally to prevent caching display anomalies
+                await loadInventoryControlMatrix();
+                await loadAnalyticsDashboard();
+            } else {
+                alert(`Supabase RLS or database error execution crash: ${error.message}`);
+            }
+        } catch (catchErr) {
+            alert(`Network structural transfer error: ${catchErr.message}`);
+        }
+    }
+}
+
+// --- UPGRADE 2: LIVE ORDER MANAGEMENT OPERATIONS ---
+async function loadOrdersQueue() {
+    if(!window.supabase) return;
+    const { data: orders, error } = await window.supabase.from('orders').select('*').order('created_at', { ascending: false });
+    const container = document.getElementById("admin-orders-list");
+    if(!container) return;
+    container.innerHTML = "";
+
+    if (error) {
+        container.innerHTML = `<p style="color:#ef4444; text-align:center;">Failed to pull inbound requisitions queue: ${error.message}</p>`;
+        return;
+    }
+
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:2rem;">No client transactions or purchase orders registered in system memory.</p>`;
+        return;
+    }
+
+    orders.forEach(order => {
+        const div = document.createElement("div");
+        div.style = "background:var(--bg-surface); padding:1.5rem; border:1px solid var(--border-color); border-radius:12px; margin-bottom:1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position:relative;";
+        
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                <strong>ORDER REQUISITION: #${order.id.substring(0,8).toUpperCase()}</strong>
+                
+                <select onchange="updateFulfillmentStatus('${order.id}', this.value)" style="padding: 4px 8px; font-weight:600; border-radius:12px; border:1px solid var(--border-color); background:#eff6ff; color:#1e40af; cursor:pointer;">
+                    <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>⏳ Pending</option>
+                    <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>⚙️ Processing</option>
+                    <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>🚚 Shipped</option>
+                    <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>✅ Delivered</option>
+                </select>
+            </div>
+            <p style="margin: 4px 0;"><strong>Item:</strong> ${order.product_title} | <strong>Qty:</strong> ${order.quantity}</p>
+            <p style="margin: 4px 0;"><strong>Customer:</strong> ${order.customer_name} (${order.phone_number})</p>
+            <p style="margin: 4px 0; color:var(--text-muted); font-size:14px;"><strong>Logistics Target:</strong> ${order.delivery_location || 'Not Specified'}</p>
+            ${order.notes ? `<p style="margin:6px 0 10px; font-size:13px; background:var(--bg-primary); padding:8px; border-radius:6px; border-left:3px solid var(--border-color); color:var(--text-muted);">"${order.notes}"</p>` : ''}
+            
+            <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
+                <button onclick="archivePurchaseOrder('${order.id}')" style="background:#f1f5f9; color:#475569; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;">🗄️ Archive Complete</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.updateFulfillmentStatus = async function(orderId, nextState) {
+    if(!window.supabase) return;
+    const { error } = await window.supabase.from('orders').update({ status: nextState }).eq('id', orderId);
+    if(!error) {
+        loadOrdersQueue();
+        loadAnalyticsDashboard();
+    } else {
+        alert(`Status update execution fault: ${error.message}`);
+    }
+};
+
+window.archivePurchaseOrder = async function(orderId) {
+    if(confirm("Archive this tracking manifest data row from active operations dashboards?")) {
+        if(!window.supabase) return;
+        const { error } = await window.supabase.from('orders').delete().eq('id', orderId);
+        if(!error) {
+            loadOrdersQueue();
+            loadAnalyticsDashboard();
+        }
+    }
+};
+
+function initializeRealtimeChannels() {
+    if(!window.supabase) return;
+    
+    window.supabase.channel('custom-insert-channel')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+        try {
+            const AudioContextInstance = window.AudioContext || window.webkitAudioContext;
+            if(AudioContextInstance) {
+                const context = new AudioContextInstance();
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(587.33, context.currentTime);
+                oscillator.frequency.setValueAtTime(880.00, context.currentTime + 0.12);
+                
+                gainNode.gain.setValueAtTime(0.15, context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.4);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.4);
+            }
+        } catch(audioError) {
+            console.log("Audio contexts blocked.", audioError);
+        }
+
+        alert(`🔔 ALERT: Critical incoming customer purchase order recorded for item: "${payload.new.product_title}"`);
+        loadOrdersQueue();
+        loadAnalyticsDashboard();
+    })
+    .subscribe();
+}
