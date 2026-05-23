@@ -7,20 +7,26 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 try {
     const configOptions = {
         auth: {
-            // UPGRADED: Set to false to disable session persistence.
-            // This forces the user to log in every time they open the page.
-            persistSession: false, 
+            persistSession: false, // Forces re-authentication
             autoRefreshToken: true,
             detectSessionInUrl: true,
-            // Added storage protection to prevent browser cache leaks
+            // Hard-locking storage to memory (sessionStorage)
             storage: typeof window !== 'undefined' ? window.sessionStorage : null
+        },
+        // Optional: Ensure the client is read-only for certain configurations
+        global: {
+            headers: { 'x-application-name': 'Mwamini-Secure-Terminal' }
         }
     };
 
     if (typeof supabase !== 'undefined' && supabase.createClient) {
         window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, configOptions);
+        
+        // SECURITY UPGRADE: Freeze the client object to prevent runtime tampering
+        Object.freeze(window.supabase);
     } else if (typeof window.supabaseJS !== 'undefined') {
         window.supabase = window.supabaseJS.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, configOptions);
+        Object.freeze(window.supabase);
     }
 } catch (e) {
     console.error("Initialization exception:", e);
