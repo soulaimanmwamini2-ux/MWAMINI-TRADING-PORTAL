@@ -1,595 +1,515 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mwamini Trading Portal</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        /* Interactive UI additions safely injected to keep your layout responsive */
-        .product-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-        /* Custom highlight styling for low stock units */
-        .low-stock-alert {
-            background: #fef2f2 !important;
-            border-color: #fca5a5 !important;
-        }
-        /* Support Section Integration Styles */
-        .support-container {
-            max-width: 600px;
-            margin: 4rem auto;
-            padding: 2rem;
-            background: var(--bg-surface, #ffffff);
-            border: 1px solid var(--border-color, #e2e8f0);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-        /* Feedback & Ratings Section UI */
-        .feedback-section {
-            max-width: 1200px;
-            margin: 4rem auto;
-            padding: 0 5%;
-        }
-        .rating-stars {
-            display: flex;
-            gap: 0.5rem;
-            margin: 0.5rem 0 1rem;
-            cursor: pointer;
-        }
-        .star {
-            font-size: 1.5rem;
-            color: #cbd5e1;
-            transition: color 0.2s;
-        }
-        .star.active {
-            color: #f59e0b;
-        }
-        .comment-card {
-            background: var(--bg-surface, #ffffff);
-            border: 1px solid var(--border-color, #e2e8f0);
-            padding: 1.25rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        /* Admin Monitoring Panel Dashboard Styles */
-        .admin-dashboard-container {
-            max-width: 1200px;
-            margin: 4rem auto;
-            padding: 2rem 5%;
-            background: #f8fafc;
-            border: 2px dashed #cbd5e1;
-            border-radius: 16px;
-        }
-        [data-theme="dark"] .admin-dashboard-container {
-            background: #1e293b;
-            border-color: #475569;
-        }
-        .dashboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-        [data-theme="dark"] .dashboard-table {
-            background: #0f172a;
-            color: #f8fafc;
-        }
-        .dashboard-table th, .dashboard-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        [data-theme="dark"] .dashboard-table th, [data-theme="dark"] .dashboard-table td {
-            border-bottom-color: #334155;
-        }
-        .dashboard-table th {
-            background: #1e3a8a;
-            color: white;
-        }
-    </style>
-</head>
-<body>
+document.addEventListener("DOMContentLoaded", () => {
+    // --- SMART ROUTING & NAVIGATIONAL HOOK ---
+    if (window.location.pathname.includes("admin.html")) {
+        // Run core system metrics collections inside the Admin Portal
+        loadAnalyticsDashboard();
+        loadInventoryControlMatrix();
+        loadOrdersQueue();
+        initializeRealtimeChannels();
 
-    <header>
-        <div class="brand-title">MWAMINI TRADING</div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
-            <button id="theme-toggle" class="btn" style="width:auto; padding:0.5rem 1rem;">🌓 Theme</button>
-            <a href="login.html" class="btn btn-primary" style="text-decoration:none; font-size:14px; padding:0.5rem 1rem;">Admin Login</a>
-        </div>
-    </header>
-
-    <section class="promo-banner" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 4rem 5%; text-align: center; border-bottom: 4px solid #10b981;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">Premium Wholesale & Retail Commodities</h1>
-        <p style="font-size: 1.1rem; opacity: 0.9;">Real-time stock validation. Direct dispatch logistics.</p>
-    </section>
-
-    <div class="search-filter-bar">
-        <input type="text" id="search-input" class="search-input" placeholder="Search across global inventory (e.g. Rice, Fertilizer)...">
-        
-        <select id="category-filter" class="filter-select">
-            <option value="All">All Categories</option>
-            <option value="Grains">Grains</option>
-            <option value="Agriculture">Agriculture</option>
-            <option value="Construction">Construction</option>
-            <option value="Electronics">Electronics</option>
-        </select>
-
-        <select id="currency-select" class="filter-select" style="max-width: 150px;">
-            <option value="USD">🇺🇸 USD ($)</option>
-            <option value="RWF">🇷🇼 RWF (Fr)</option>
-            <option value="RUB">🇷🇺 RUB (₽)</option>
-        </select>
-    </div>
-
-    <main class="products-grid" id="products-container">
-    </main>
-
-    <section class="feedback-section">
-        <hr style="border: 0; border-top: 1px solid var(--border-color, #e2e8f0); margin-bottom: 3rem;">
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 3rem;">
-            <div>
-                <h3 style="color: #1e3a8a; margin-bottom: 0.5rem;">Client Service Reviews</h3>
-                <p style="font-size: 14px; color: #64748b; margin-bottom: 1.5rem;">Submit your fulfillment and cargo distribution ratings to our logistics managers.</p>
-                
-                <form id="public-review-form" style="background: var(--bg-surface, #fff); border: 1px solid var(--border-color, #e2e8f0); padding: 1.5rem; border-radius: 12px;">
-                    <label style="display:block; font-size: 14px; font-weight: 500;">Your Name</label>
-                    <input type="text" id="review-author" class="search-input" style="width:100%; margin-bottom:1rem;" placeholder="John Doe" required>
-                    
-                    <label style="display:block; font-size: 14px; font-weight: 500; margin-bottom: 0.25rem;">Quality & Dispatch Rating</label>
-                    <div class="rating-stars" id="review-stars-bucket">
-                        <span class="star" data-value="1">★</span>
-                        <span class="star" data-value="2">★</span>
-                        <span class="star" data-value="3">★</span>
-                        <span class="star" data-value="4">★</span>
-                        <span class="star" data-value="5">★</span>
-                    </div>
-                    
-                    <label style="display:block; font-size: 14px; font-weight: 500;">Your Experience / Feedback</label>
-                    <textarea id="review-text" class="search-input" style="width:100%; height:80px; margin-bottom:1.5rem;" placeholder="Share your experience working with Mwamini Trading..." required></textarea>
-                    
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Platform Review</button>
-                </form>
-            </div>
-            
-            <div>
-                <h4 style="margin-bottom: 1rem; font-weight: 600;">Recent Verified Client Feedback</h4>
-                <div id="comments-display-container">
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="admin-dashboard-container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <div>
-                <h3 style="color: #1e3a8a; margin: 0;">Mainframe Feedback Control Center</h3>
-                <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">Live tracking stream of customer rating markers and text payloads.</p>
-            </div>
-            <button onclick="fetchAndRenderPlatformReviews()" class="btn" style="width: auto; padding: 0.5rem 1rem; font-size: 12px; background: #e2e8f0; color: black;">🔄 Force Sync</button>
-        </div>
-        
-        <table class="dashboard-table">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Client Name</th>
-                    <th>Rating Status</th>
-                    <th>Verbatim Feedback Message</th>
-                </tr>
-            </thead>
-            <tbody id="admin-dashboard-rows">
-                <tr>
-                    <td colspan="4" style="text-align: center; color: #64748b; padding: 2rem;">Connecting real-time admin monitoring grids...</td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
-
-    <section class="support-container">
-        <h3 style="margin-bottom: 1rem; color: #1e3a8a;">Contact Client Support Helpdesk</h3>
-        <p style="font-size: 14px; color: #64748b; margin-bottom: 1.5rem;">Have questions about your wholesale order or cargo shipments? Transmit your query directly to our admins via email client routing.</p>
-        <form id="public-support-form">
-            <label style="display:block; margin-bottom: 0.25rem; font-size: 14px; font-weight: 500;">Your Registered Email Address</label>
-            <input type="email" id="support-email" class="search-input" style="width:100%; margin-bottom:1rem;" placeholder="client@domain.com" required>
-            
-            <label style="display:block; margin-bottom: 0.25rem; font-size: 14px; font-weight: 500;">Inquiry Subject</label>
-            <input type="text" id="support-subject" class="search-input" style="width:100%; margin-bottom:1rem;" placeholder="Delivery Delay, Custom Invoice Request..." required>
-            
-            <label style="display:block; margin-bottom: 0.25rem; font-size: 14px; font-weight: 500;">Message</label>
-            <textarea id="support-message" class="search-input" style="width:100%; height:100px; margin-bottom:1.5rem;" placeholder="Detail your freight specifications or issues here..." required></textarea>
-            
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Transmit Ticket to Helpdesk</button>
-        </form>
-    </section>
-
-    <div class="modal" id="order-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
-        <div class="modal-content" style="position: relative; padding: 2.5rem; background: var(--bg-surface, #fff); width: 90%; max-width: 500px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-            <button type="button" onclick="closeOrderModal()" style="position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" title="Close Panel">✕</button>
-
-            <h3 style="margin-bottom: 1.5rem; padding-right: 2rem;" id="modal-product-title">Place Order Submission</h3>
-            <form id="order-submission-form">
-                <input type="hidden" id="form-product-id">
-                <input type="hidden" id="form-product-title-val">
-                
-                <label style="display:block; margin: 0.5rem 0 0.25rem;">Full Name</label>
-                <input type="text" id="cust-name" class="search-input" style="width:100%; margin-bottom:1rem;" required>
-                
-                <label style="display:block; margin: 0.5rem 0 0.25rem;">Phone Number (WhatsApp Active)</label>
-                <input type="tel" id="cust-phone" class="search-input" style="width:100%; margin-bottom:1rem;" required>
-                
-                <label style="display:block; margin: 0.5rem 0 0.25rem;">Quantity Requested</label>
-                <input type="number" id="cust-qty" value="1" min="1" class="search-input" style="width:100%; margin-bottom:1rem;" required>
-                
-                <label style="display:block; margin: 0.5rem 0 0.25rem;">Delivery Destination / Hub</label>
-                <input type="text" id="cust-location" class="search-input" style="width:100%; margin-bottom:1rem;" required>
-                
-                <label style="display:block; margin: 0.5rem 0 0.25rem;">Special Notes or Freight Requests</label>
-                <textarea id="cust-notes" class="search-input" style="width:100%; height:80px; margin-bottom:1.5rem;"></textarea>
-                
-                <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-primary" style="flex: 2;">Authorize & Transmit Order</button>
-                    <button type="button" class="btn" style="background:#e2e8f0; color: black; flex: 1;" onclick="closeOrderModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script src="supabase-config.js"></script>
-    <script>
-        let localProductsCache = [];
-        let selectedRatingValue = 5;
-        let globalSupportEmailTarget = "support@mwamini-trading.com"; 
-        const exchangeRates = { USD: 1, RWF: 1290, RUB: 91.5 }; 
-
-        document.addEventListener("DOMContentLoaded", () => {
-            initializePublicCatalog();
-            setupSearchFilters();
-            setupSupportEmailClient();
-            initializeOrderFulfillmentEngine();
-            initializeReviewsSystem();
-            fetchSystemRoutingProfile();
+        // Bind navigational hooks directly to DOM nodes
+        setupNavigationListeners();
+        setupAdminSearchFilters();
+    } else {
+        // We are on the public storefront page! Intercept the Admin Login button click cleanly
+        const triggerElements = document.querySelectorAll('button, a, .btn');
+        triggerElements.forEach(element => {
+            if (element.textContent.trim().includes("Admin Login")) {
+                element.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    window.location.href = "admin.html"; // Redirect straight to the admin workspace
+                });
+            }
         });
+    }
+});
 
-        // Pull active admin-configured variables dynamically
-        async function fetchSystemRoutingProfile() {
-            if (!window.supabase) return;
-            const { data, error } = await window.supabase.from('system_settings').select('*').limit(1);
-            if (!error && data && data.length > 0) {
-                if (data[0].support_email) {
-                    globalSupportEmailTarget = data[0].support_email;
-                }
+// Cache storage array buckets to optimize search operations locally
+let localAdminInventoryCache = [];
+const conversionAnchorRates = { USD: 1, RWF: 1290 };
+
+function setupNavigationListeners() {
+    const navButtons = document.querySelectorAll('.sidebar .btn:not(#logout-btn)');
+    
+    // Set initial structural UI focus on the first analytics panel tab button
+    if (navButtons.length > 0) {
+        navButtons[0].classList.add('active-tab');
+        const initialPanel = document.getElementById('analytics-view');
+        if (initialPanel) initialPanel.classList.add('active-panel');
+    }
+
+    navButtons.forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+            let destinationPanelId = 'analytics-view';
+            if (index === 1) destinationPanelId = 'inventory-view';
+            if (index === 2) destinationPanelId = 'orders-view';
+
+            switchTab(destinationPanelId, btn);
+        });
+    });
+}
+
+function switchTab(tabId, clickedButton) {
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active-panel');
+    });
+
+    document.querySelectorAll('.sidebar .btn').forEach(btn => {
+        btn.classList.remove('active-tab');
+    });
+
+    const targetPanel = document.getElementById(tabId);
+    if (targetPanel) {
+        targetPanel.classList.add('active-panel');
+    }
+
+    if (clickedButton) {
+        clickedButton.classList.add('active-tab');
+    }
+
+    if (tabId === 'inventory-view') {
+        loadInventoryControlMatrix();
+    } else if (tabId === 'orders-view') {
+        loadOrdersQueue();
+    }
+}
+
+// --- ADVANCED ANALYTICS & FINANCIAL INTELLIGENCE ---
+async function loadAnalyticsDashboard() {
+    if(!window.supabase) return;
+    try {
+        const { data: globalProducts } = await window.supabase.from('products').select('*');
+        const { data: globalOrders } = await window.supabase.from('orders').select('*');
+
+        const skuCount = globalProducts ? globalProducts.length : 0;
+        const orderCount = globalOrders ? globalOrders.length : 0;
+
+        let aggregatedTotalValuationUSD = 0;
+        if(globalProducts) {
+            globalProducts.forEach(item => {
+                const isRwf = item.description && item.description.includes("[CURRENCY:RWF]");
+                const priceInUSD = isRwf ? (item.price / conversionAnchorRates.RWF) : item.price;
+                aggregatedTotalValuationUSD += (priceInUSD * (item.quantity || 0));
+            });
+        }
+
+        if(document.getElementById("metric-stock")) {
+            document.getElementById("metric-stock").innerHTML = `
+                <div style="font-size:24px; font-weight:700;">${skuCount} Active SKUs</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                    Asset Value: $${Math.round(aggregatedTotalValuationUSD).toLocaleString()} / 
+                    ${Math.round(aggregatedTotalValuationUSD * conversionAnchorRates.RWF).toLocaleString()} RWF
+                </div>
+            `;
+        }
+        if(document.getElementById("metric-orders")) {
+            document.getElementById("metric-orders").innerText = orderCount;
+        }
+
+        renderDynamicSalesChart(globalOrders || []);
+
+    } catch (err) {
+        console.error("Analytics metrics gather fault:", err);
+    }
+}
+
+function renderDynamicSalesChart(ordersData) {
+    const canvas = document.getElementById('salesChart');
+    if(!canvas || typeof Chart === 'undefined') return;
+
+    const weekdayDistributionCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
+    const weekdayMapIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    ordersData.forEach(order => {
+        if(order.created_at) {
+            const dateObj = new Date(order.created_at);
+            const dayLabel = weekdayMapIndex[dateObj.getDay()];
+            if(weekdayDistributionCounts[dayLabel] !== undefined) {
+                weekdayDistributionCounts[dayLabel] += (order.quantity || 1);
             }
         }
+    });
 
-        async function initializePublicCatalog() {
-            const container = document.getElementById("products-container");
-            if (!window.supabase || !container) return;
+    const ctx = canvas.getContext('2d');
+    
+    if(window.activeDashboardChartInstance) {
+        window.activeDashboardChartInstance.destroy();
+    }
 
-            container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding: 3rem; color: #64748b;">Syncing distribution catalog matrix...</p>`;
+    window.activeDashboardChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Live Real-time Order Volumetric Demand Metrics',
+                data: [
+                    weekdayDistributionCounts['Mon'],
+                    weekdayDistributionCounts['Tue'],
+                    weekdayDistributionCounts['Wed'],
+                    weekdayDistributionCounts['Thu'],
+                    weekdayDistributionCounts['Fri'],
+                    weekdayDistributionCounts['Sat'],
+                    weekdayDistributionCounts['Sun']
+                ],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: true, position: 'top' } }
+        }
+    });
+}
 
-            const { data, error } = await window.supabase
+// --- BULK DATA UTILITIES & SEARCH OPTIMIZATION LAYER ---
+function setupAdminSearchFilters() {
+    const filterContainer = document.createElement("div");
+    filterContainer.style = "display:flex; gap:1rem; margin-bottom:1.5rem; background:var(--bg-surface); padding:1rem; border-radius:8px; border:1px solid var(--border-color);";
+    filterContainer.innerHTML = `
+        <input type="text" id="admin-search-box" placeholder="Filter live stock records table instantly..." style="flex:2; padding:0.5rem; border:1px solid var(--border-color); border-radius:6px;">
+        <select id="admin-category-box" style="flex:1; padding:0.5rem; border:1px solid var(--border-color); border-radius:6px;">
+            <option value="All">All Live Categories</option>
+            <option value="Grains">Grains (Salt, Rice, Sugar)</option>
+            <option value="Agriculture">Agriculture & Farming Tools</option>
+            <option value="Construction">Construction Materials</option>
+            <option value="Electronics">Industrial Electronics</option>
+        </select>
+    `;
+
+    const inventoryViewPanel = document.getElementById("inventory-view");
+    if(inventoryViewPanel) {
+        const targetTable = inventoryViewPanel.querySelector("table");
+        if(targetTable) {
+            targetTable.parentNode.insertBefore(filterContainer, targetTable);
+        }
+    }
+
+    const runFilteringExecution = () => {
+        const query = document.getElementById("admin-search-box")?.value.toLowerCase().trim() || "";
+        const categorySelection = document.getElementById("admin-category-box")?.value || "All";
+
+        const filteredRows = localAdminInventoryCache.filter(item => {
+            const matchesText = item.title.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
+            const matchesCategory = (categorySelection === "All" || item.category === categorySelection);
+            return matchesText && matchesCategory;
+        });
+
+        renderInventoryRowsHTML(filteredRows);
+    };
+
+    document.getElementById("admin-search-box")?.addEventListener("input", runFilteringExecution);
+    document.getElementById("admin-category-box")?.addEventListener("change", runFilteringExecution);
+}
+
+async function loadInventoryControlMatrix() {
+    if(!window.supabase) return;
+    const { data: skus, error } = await window.supabase.from('products').select('*').order('created_at', { ascending: false });
+    
+    if (!error && skus) {
+        localAdminInventoryCache = skus;
+        renderInventoryRowsHTML(localAdminInventoryCache);
+    } else {
+        const tbody = document.getElementById("sku-table-body");
+        if(tbody) tbody.innerHTML = `<tr><td colspan="6" style="padding:1rem; text-align:center; color:#ef4444;">Failed to sync stock records: ${error.message}</td></tr>`;
+    }
+}
+
+function renderInventoryRowsHTML(skusList) {
+    const tbody = document.getElementById("sku-table-body");
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    if (skusList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:1rem; text-align:center; color:var(--text-muted);">No matched commodities structural listings match these query conditions.</td></tr>`;
+        return;
+    }
+
+    skusList.forEach(sku => {
+        let renderedMediaHTML = `<span style="color:var(--text-muted); font-size:12px;">No File</span>`;
+        
+        if (sku.image_url) {
+            const absoluteAssetUrl = sku.image_url.startsWith('http') 
+                ? sku.image_url 
+                : window.supabase.storage.from('product-assets').getPublicUrl(sku.image_url).data.publicUrl;
+            
+            renderedMediaHTML = `<img src="${absoluteAssetUrl}" style="width:45px; height:45px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);" onerror="this.parentElement.innerHTML='⚠️ Link Error'">`;
+        }
+
+        const activeCurrencyLabel = sku.description && sku.description.includes("[CURRENCY:RWF]") ? "RWF" : "$";
+        const formattedPriceDisplay = activeCurrencyLabel === "RWF" 
+            ? `${sku.price?.toLocaleString()} RWF` 
+            : `$${sku.price?.toLocaleString()}`;
+
+        const runningLowWarningHighlightStyle = (sku.quantity <= 3) ? "background-color: #fef2f2; color: #991b1b; font-weight:700;" : "";
+
+        const row = document.createElement("tr");
+        if(runningLowWarningHighlightStyle) row.style = runningLowWarningHighlightStyle;
+
+        const safelyEscapedSkuJSON = JSON.stringify(sku).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        row.innerHTML = `
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); text-align:center;">${renderedMediaHTML}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); font-weight:600;">${sku.title}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color);">${sku.category}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); font-weight:700; color:var(--accent);">${formattedPriceDisplay}</td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color);">
+                <span class="badge" style="position:static; background:#64748b; margin-right:8px;">${sku.status}</span>
+                <span style="font-size:12px; font-weight:600;">(${sku.quantity || 0} left)</span>
+            </td>
+            <td style="padding:1rem; border-bottom:1px solid var(--border-color); text-align:center;">
+                <div style="display:flex; gap:0.5rem; justify-content:center;">
+                    <button class="btn" style="width:auto; padding:6px 12px; margin:0; font-size:12px; background:#10b981; color:white; border-radius:6px;" onclick="initializeSKUUpdateMatrix(${safelyEscapedSkuJSON})">Edit</button>
+                    <button class="btn" style="width:auto; padding:6px 12px; margin:0; font-size:12px; background:#ef4444; color:white; border-radius:6px;" onclick="purgeSKU('${sku.id}')">Delete</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function initializeSKUUpdateMatrix(sku) {
+    const container = document.getElementById("product-form-container");
+    if (!container) return;
+    
+    container.style.display = "block";
+    document.getElementById("sku-id").value = sku.id;
+    document.getElementById("sku-title").value = sku.title;
+    document.getElementById("sku-price").value = sku.price;
+    document.getElementById("sku-qty").value = sku.quantity || 0;
+    document.getElementById("sku-status").value = sku.status;
+    
+    const categorySelector = document.getElementById("sku-category");
+    if (categorySelector) {
+        categorySelector.value = sku.category;
+    }
+    
+    const fileInput = document.getElementById("sku-file");
+    if (fileInput) {
+        fileInput.dataset.existingUrl = sku.image_url || "";
+    }
+
+    if (sku.description) {
+        document.getElementById("sku-desc").value = sku.description.replace(/\[CURRENCY:\w+\]/g, "").trim();
+        const currencySelector = document.getElementById("sku-currency-type");
+        if (currencySelector) {
+            currencySelector.value = sku.description.includes("[CURRENCY:RWF]") ? "RWF" : "USD";
+        }
+    } else {
+        document.getElementById("sku-desc").value = "";
+    }
+    
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function openNewProductForm() {
+    const container = document.getElementById("product-form-container");
+    if (container) {
+        if(container.style.display === 'none' || !container.style.display) {
+            document.getElementById("sku-management-form").reset();
+            document.getElementById("sku-id").value = "";
+            
+            const fileInput = document.getElementById("sku-file");
+            if(fileInput) fileInput.removeAttribute('data-existing-url');
+
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+}
+
+document.getElementById("sku-management-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if(!window.supabase) return;
+    
+    const fileInput = document.getElementById("sku-file");
+    const existingId = document.getElementById("sku-id").value;
+    let assetUrl = fileInput?.dataset.existingUrl || "";
+
+    if(fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const filePath = `images/${fileName}`;
+
+        const { error: uploadError } = await window.supabase.storage
+            .from('product-assets')
+            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+        if(!uploadError) {
+            const { data: urlData } = window.supabase.storage.from('product-assets').getPublicUrl(filePath);
+            assetUrl = urlData.publicUrl;
+        } else {
+            alert(`File transfer failure: ${uploadError.message}`);
+            return;
+        }
+    }
+
+    const currencyType = document.getElementById("sku-currency-type")?.value || "USD";
+    const cleanDescription = document.getElementById("sku-desc").value;
+    const specializedPayloadDescription = `${cleanDescription} [CURRENCY:${currencyType}]`;
+
+    const payload = {
+        title: document.getElementById("sku-title").value,
+        price: parseFloat(document.getElementById("sku-price").value),
+        category: document.getElementById("sku-category").value,
+        quantity: parseInt(document.getElementById("sku-qty").value) || 0,
+        status: document.getElementById("sku-status").value,
+        description: specializedPayloadDescription,
+        image_url: assetUrl || null
+    };
+
+    let error;
+    if (existingId) {
+        const { error: updateError } = await window.supabase.from('products').update(payload).eq('id', existingId);
+        error = updateError;
+    } else {
+        const { error: insertError } = await window.supabase.from('products').insert([payload]);
+        error = insertError;
+    }
+
+    if(!error) {
+        alert(existingId ? "Product updated successfully into public registry." : "Product listed successfully into public catalog registry.");
+        document.getElementById("sku-management-form").reset();
+        document.getElementById("sku-id").value = "";
+        if(fileInput) fileInput.removeAttribute('data-existing-url');
+        
+        openNewProductForm();
+        loadInventoryControlMatrix();
+        loadAnalyticsDashboard();
+    } else {
+        alert(`Failed to save record: ${error.message}`);
+    }
+});
+
+async function purgeSKU(id) {
+    if (!id || id === 'undefined') {
+        alert("Error: Invalid or unmapped item ID structure framework tracking vector.");
+        return;
+    }
+    
+    if (confirm("Confirm structural deletion of this item from inventory records? This action cannot be undone.")) {
+        try {
+            const { error } = await window.supabase
                 .from('products')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .delete()
+                .eq('id', id);
 
-            if (error) {
-                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding: 3rem; color: #ef4444;">Sync Error: ${error.message}</p>`;
-                return;
+            if (!error) {
+                alert("Commodity item purged successfully from storage manifest.");
+                await loadInventoryControlMatrix();
+                await loadAnalyticsDashboard();
+            } else {
+                alert(`Supabase RLS or database error execution crash: ${error.message}`);
             }
-
-            localProductsCache = data || [];
-            renderCatalogGrid(localProductsCache);
-            initializeRealtimeCatalogUpdates();
+        } catch (catchErr) {
+            alert(`Network structural transfer error: ${catchErr.message}`);
         }
+    }
+}
 
-        function renderCatalogGrid(productsList) {
-            const container = document.getElementById("products-container");
-            const targetCurrency = document.getElementById("currency-select").value;
-            if (!container) return;
+async function loadOrdersQueue() {
+    if(!window.supabase) return;
+    const { data: orders, error } = await window.supabase.from('orders').select('*').order('created_at', { ascending: false });
+    const container = document.getElementById("admin-orders-list");
+    if(!container) return;
+    container.innerHTML = "";
 
-            if (productsList.length === 0) {
-                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding: 3rem; color: #64748b;">No matching commodities found inside current view parameters.</p>`;
-                return;
-            }
+    if (error) {
+        container.innerHTML = `<p style="color:#ef4444; text-align:center;">Failed to pull inbound requisitions queue: ${error.message}</p>`;
+        return;
+    }
 
-            container.innerHTML = "";
-            productsList.forEach(item => {
-                const hasRwfTag = item.description && item.description.includes("[CURRENCY:RWF]");
-                const hasRubTag = item.description && item.description.includes("[CURRENCY:RUB]");
-                const sourceCurrency = hasRwfTag ? "RWF" : (hasRubTag ? "RUB" : "USD");
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:2rem;">No client transactions or purchase orders registered in system memory.</p>`;
+        return;
+    }
 
-                const priceInUSD = item.price / exchangeRates[sourceCurrency];
-                const convertedPrice = priceInUSD * exchangeRates[targetCurrency];
-
-                let currencySymbol = "$";
-                if (targetCurrency === "RWF") currencySymbol = "RWF ";
-                if (targetCurrency === "RUB") currencySymbol = "₽";
-
-                const cleanDescription = item.description ? item.description.replace(/\[CURRENCY:\w+\]/g, "").trim() : "";
-                const isLowStock = (item.quantity <= 3);
-                const lowStockClass = isLowStock ? "low-stock-alert" : "";
-
-                let finalMediaUrl = "https://via.placeholder.com/400x300?text=No+Asset+Selected";
-                if (item.image_url) {
-                    finalMediaUrl = item.image_url.startsWith('http') 
-                        ? item.image_url 
-                        : item.image_url;
-                }
-
-                const cardNode = document.createElement("div");
-                cardNode.className = `product-card ${lowStockClass}`;
-                cardNode.style = "background: var(--bg-surface, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;";
+    orders.forEach(order => {
+        const div = document.createElement("div");
+        div.style = "background:var(--bg-surface); padding:1.5rem; border:1px solid var(--border-color); border-radius:12px; margin-bottom:1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position:relative;";
+        
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                <strong>ORDER REQUISITION: #${order.id.substring(0,8).toUpperCase()}</strong>
                 
-                cardNode.innerHTML = `
-                    <div style="position: relative; height: 200px; background: #f1f5f9;">
-                        <img src="${finalMediaUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/400x300?text=Asset+Link+Error'">
-                        <span style="position: absolute; top: 0.75rem; right: 0.75rem; background: ${isLowStock ? '#ef4444' : '#1e3a8a'}; color: white; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;">
-                            ${item.stock_status || 'In Stock'} (${item.quantity} units)
-                        </span>
-                    </div>
-                    <div style="padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                        <div>
-                            <span style="font-size: 11px; text-transform: uppercase; font-weight:700; color: #3b82f6;">${item.category}</span>
-                            <h4 style="font-size: 18px; margin: 0.25rem 0 0.5rem; font-weight: 600;">${item.title}</h4>
-                            <p style="font-size: 13px; color: #64748b; margin-bottom: 1rem; line-height: 1.4;">${cleanDescription || 'No description listed.'}</p>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
-                            <span style="font-size: 20px; font-weight: 700; color: #10b981;">${currencySymbol}${Math.round(convertedPrice).toLocaleString()}</span>
-                            <button class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 13px;" onclick="openOrderModal('${item.id}', '${item.title.replace(/'/g, "\\'")}')">Order</button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(cardNode);
-            });
-        }
-
-        function initializeOrderFulfillmentEngine() {
-            const orderForm = document.getElementById("order-submission-form");
-            if (!orderForm) return;
-
-            orderForm.addEventListener("submit", async (e) => {
-                e.preventDefault();
-
-                const productId = document.getElementById("form-product-id").value;
-                const productTitle = document.getElementById("form-product-title-val").value;
-                const customerName = document.getElementById("cust-name").value;
-                const customerPhone = document.getElementById("cust-phone").value;
-                const requestedQty = parseInt(document.getElementById("cust-qty").value, 10);
-                const deliveryLocation = document.getElementById("cust-location").value;
-                const deliveryNotes = document.getElementById("cust-notes").value;
-
-                const targetedProduct = localProductsCache.find(p => p.id === productId);
-                if (!targetedProduct || targetedProduct.quantity < requestedQty) {
-                    alert(`Fulfillment Error: Insufficient stock registry available. Only ${targetedProduct ? targetedProduct.quantity : 0} units remain.`);
-                    return;
-                }
-
-                const { error: orderError } = await window.supabase
-                    .from('orders')
-                    .insert([{
-                        product_title: productTitle,
-                        customer_name: customerName,
-                        phone_number: customerPhone,
-                        quantity: requestedQty,
-                        delivery_location: deliveryLocation,
-                        status: 'Pending'
-                    }]);
-
-                if (orderError) {
-                    alert(`Logistics routing failed: ${orderError.message}`);
-                    return;
-                }
-
-                const modernUpdatedQty = targetedProduct.quantity - requestedQty;
-                const dynamicStatusString = modernUpdatedQty === 0 ? 'Out of stock' : (modernUpdatedQty <= 3 ? 'Limited stock' : (targetedProduct.stock_status || 'In Stock'));
-
-                await window.supabase
-                    .from('products')
-                    .update({ quantity: modernUpdatedQty, stock_status: dynamicStatusString })
-                    .eq('id', productId);
-
-                alert("Transaction Processed! Your order has reached the dispatch mainframe board successfully.");
-                closeOrderModal();
-                orderForm.reset();
-            });
-        }
-
-        function initializeReviewsSystem() {
-            const stars = document.querySelectorAll("#review-stars-bucket .star");
-            stars.forEach(s => {
-                s.addEventListener("click", (e) => {
-                    selectedRatingValue = parseInt(e.target.getAttribute("data-value"), 10);
-                    stars.forEach((star, index) => {
-                        star.classList.toggle("active", index < selectedRatingValue);
-                    });
-                });
-            });
-
-            stars.forEach((star, index) => star.classList.toggle("active", index < selectedRatingValue));
-
-            const reviewForm = document.getElementById("public-review-form");
-            reviewForm?.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const author = document.getElementById("review-author").value;
-                const feedback = document.getElementById("review-text").value;
-
-                const { error } = await window.supabase
-                    .from('reviews')
-                    .insert([{ author: author, rating: selectedRatingValue, feedback: feedback }]);
-
-                if (error) {
-                    renderLocalCommentFallback(author, selectedRatingValue, feedback);
-                } else {
-                    fetchAndRenderPlatformReviews();
-                }
-
-                reviewForm.reset();
-                selectedRatingValue = 5;
-                stars.forEach((star, index) => star.classList.toggle("active", index < selectedRatingValue));
-            });
-
-            fetchAndRenderPlatformReviews();
-            initializeRealtimeReviewChannel();
-        }
-
-        async function fetchAndRenderPlatformReviews() {
-            const container = document.getElementById("comments-display-container");
-            const adminTableBody = document.getElementById("admin-dashboard-rows");
-            if (!container || !window.supabase) return;
-
-            const { data, error } = await window.supabase.from('reviews').select('*').order('created_at', { ascending: false });
+                <select onchange="updateFulfillmentStatus('${order.id}', this.value)" style="padding: 4px 8px; font-weight:600; border-radius:12px; border:1px solid var(--border-color); background:#eff6ff; color:#1e40af; cursor:pointer;">
+                    <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>⏳ Pending</option>
+                    <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>⚙️ Processing</option>
+                    <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>🚚 Shipped</option>
+                    <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>✅ Delivered</option>
+                </select>
+            </div>
+            <p style="margin: 4px 0;"><strong>Item:</strong> ${order.product_title} | <strong>Qty:</strong> ${order.quantity}</p>
+            <p style="margin: 4px 0;"><strong>Customer:</strong> ${order.customer_name} (${order.phone_number})</p>
+            <p style="margin: 4px 0; color:var(--text-muted); font-size:14px;"><strong>Logistics Target:</strong> ${order.delivery_location || 'Not Specified'}</p>
+            ${order.notes ? `<p style="margin:6px 0 10px; font-size:13px; background:var(--bg-primary); padding:8px; border-radius:6px; border-left:3px solid var(--border-color); color:var(--text-muted);">"${order.notes}"</p>` : ''}
             
-            if (error || !data || data.length === 0) {
-                container.innerHTML = `
-                    <div class="comment-card">
-                        <strong>Logistics Supervisor</strong>
-                        <div style="color:#f59e0b; margin: 4px 0;">★★★★★</div>
-                        <p style="font-size:13px; color:#64748b; margin:0;">Distribution channels running fully synchronized.</p>
-                    </div>`;
-                if (adminTableBody) {
-                    adminTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">No review data objects located in remote table storage.</td></tr>`;
-                }
-                return;
-            }
+            <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
+                <button onclick="archivePurchaseOrder('${order.id}')" style="background:#f1f5f9; color:#475569; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;">🗄️ Archive Complete</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
 
-            container.innerHTML = "";
-            if (adminTableBody) adminTableBody.innerHTML = "";
+window.updateFulfillmentStatus = async function(orderId, nextState) {
+    if(!window.supabase) return;
+    const { error } = await window.supabase.from('orders').update({ status: nextState }).eq('id', orderId);
+    if(!error) {
+        loadOrdersQueue();
+        loadAnalyticsDashboard();
+    } else {
+        alert(`Status update execution fault: ${error.message}`);
+    }
+};
 
-            data.forEach(rev => {
-                const starsDisplay = "★".repeat(rev.rating || 5) + "☆".repeat(5 - (rev.rating || 5));
-                const timestamp = rev.created_at ? new Date(rev.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just Now';
+window.archivePurchaseOrder = async function(orderId) {
+    if(confirm("Archive this tracking manifest data row from active operations dashboards?")) {
+        if(!window.supabase) return;
+        const { error } = await window.supabase.from('orders').delete().eq('id', orderId);
+        if(!error) {
+            loadOrdersQueue();
+            loadAnalyticsDashboard();
+        }
+    }
+};
+
+function initializeRealtimeChannels() {
+    if(!window.supabase) return;
+    
+    window.supabase.channel('custom-insert-channel')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+        try {
+            const AudioContextInstance = window.AudioContext || window.webkitAudioContext;
+            if(AudioContextInstance) {
+                const context = new AudioContextInstance();
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
                 
-                container.innerHTML += `
-                    <div class="comment-card">
-                        <strong>${rev.author || 'Anonymous'}</strong>
-                        <div style="color:#f59e0b; margin: 4px 0; font-size:13px;">${starsDisplay}</div>
-                        <p style="font-size:13px; color:#64748b; margin:0;">${rev.feedback || ''}</p>
-                    </div>`;
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(587.33, context.currentTime);
+                oscillator.frequency.setValueAtTime(880.00, context.currentTime + 0.12);
                 
-                if (adminTableBody) {
-                    adminTableBody.innerHTML += `
-                        <tr>
-                            <td style="font-size:12px; color:#64748b; font-family:monospace;">${timestamp}</td>
-                            <td style="font-weight:600;">${rev.author || 'Anonymous'}</td>
-                            <td style="color:#f59e0b; font-size:13px; letter-spacing:1px;">${starsDisplay}</td>
-                            <td style="font-size:13px; color:#334155;">${rev.feedback || ''}</td>
-                        </tr>`;
-                }
-            });
-        }
-
-        function renderLocalCommentFallback(author, rating, text) {
-            const container = document.getElementById("comments-display-container");
-            const adminTableBody = document.getElementById("admin-dashboard-rows");
-            const starsDisplay = "★".repeat(rating) + "☆".repeat(5 - rating);
-            
-            const fallbackCard = `
-                <div class="comment-card">
-                    <strong>${author} (Local Cache)</strong>
-                    <div style="color:#f59e0b; margin: 4px 0; font-size:13px;">${starsDisplay}</div>
-                    <p style="font-size:13px; color:#64748b; margin:0;">${text}</p>
-                </div>`;
-            container.insertAdjacentHTML('afterbegin', fallbackCard);
-
-            if (adminTableBody) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-size:12px; color:#ef4444; font-family:monospace;">Sync Pending</td>
-                    <td style="font-weight:600;">${author}</td>
-                    <td style="color:#f59e0b; font-size:13px;">${starsDisplay}</td>
-                    <td style="font-size:13px; color:#64748b; font-style:italic;">${text}</td>`;
-                adminTableBody.insertBefore(tr, adminTableBody.firstChild);
+                gainNode.gain.setValueAtTime(0.15, context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.4);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.4);
             }
+        } catch(audioError) {
+            console.log("Audio contexts blocked.", audioError);
         }
 
-        function setupSearchFilters() {
-            const searchInput = document.getElementById("search-input");
-            const categoryFilter = document.getElementById("category-filter");
-            const currencySelect = document.getElementById("currency-select");
-
-            const triggerFilterExecution = () => {
-                const searchVal = searchInput.value.toLowerCase().trim();
-                const categoryVal = categoryFilter.value;
-
-                const filtered = localProductsCache.filter(prod => {
-                    const matchesSearch = prod.title.toLowerCase().includes(searchVal) || 
-                                          (prod.description && prod.description.toLowerCase().includes(searchVal));
-                    const matchesCategory = categoryVal === "All" ? true : (prod.category === categoryVal);
-                    return matchesSearch && matchesCategory;
-                });
-
-                renderCatalogGrid(filtered);
-            };
-
-            searchInput.addEventListener("input", triggerFilterExecution);
-            categoryFilter.addEventListener("change", triggerFilterExecution);
-            currencySelect.addEventListener("change", () => renderCatalogGrid(localProductsCache));
-        }
-
-        function setupSupportEmailClient() {
-            document.getElementById("public-support-form")?.addEventListener("submit", (e) => {
-                e.preventDefault();
-                const userEmail = document.getElementById("support-email").value;
-                const subject = document.getElementById("support-subject").value;
-                const message = document.getElementById("support-message").value;
-
-                const bodyText = `Sender Reference Address: ${userEmail}\n\nMessage Payload:\n${message}`;
-                const mailtoLink = `mailto:${globalSupportEmailTarget}?subject=${encodeURIComponent('[PORTAL HELP] ' + subject)}&body=${encodeURIComponent(bodyText)}`;
-                window.location.href = mailtoLink;
-            });
-        }
-
-        function initializeRealtimeCatalogUpdates() {
-            if (!window.supabase) return;
-            window.supabase.channel('public-products-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
-                    const { data } = await window.supabase.from('products').select('*').order('created_at', { ascending: false });
-                    if (data) {
-                        localProductsCache = data;
-                        renderCatalogGrid(localProductsCache);
-                    }
-                })
-                .subscribe();
-        }
-
-        function initializeRealtimeReviewChannel() {
-            if (!window.supabase) return;
-            window.supabase.channel('public-reviews-channel')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews' }, () => {
-                    fetchAndRenderPlatformReviews();
-                })
-                .subscribe();
-        }
-
-        window.openOrderModal = function(id, title) {
-            const modal = document.getElementById('order-modal');
-            if(!modal) return;
-            
-            document.getElementById('form-product-id').value = id;
-            document.getElementById('form-product-title-val').value = title;
-            document.getElementById('modal-product-title').innerText = `Place Order Submission: ${title}`;
-            modal.style.display = 'flex';
-        };
-
-        window.closeOrderModal = function() {
-            const modal = document.getElementById('order-modal');
-            if(modal) modal.style.display = 'none';
-        };
-
-        const toggle = document.getElementById('theme-toggle');
-        toggle.addEventListener('click', () => {
-            const root = document.documentElement;
-            const current = root.getAttribute('data-theme');
-            root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        });
-    </script>
-</body>
-</html>
+        alert(`🔔 ALERT: Critical incoming customer purchase order recorded for item: "${payload.new.product_title}"`);
+        loadOrdersQueue();
+        loadAnalyticsDashboard();
+    })
+    .subscribe();
+}
