@@ -1,469 +1,595 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mwamini Trading - Premium Commodities Portal</title>
+    <title>Mwamini Trading Portal</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* CSS Reset & Global Layout Fixes */
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
+        /* Interactive UI additions safely injected to keep your layout responsive */
+        .product-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .portal-wrapper {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1.5rem;
-        }
-        .header-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem 0;
-        }
-        .hero-banner {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 4rem 2rem;
-            text-align: center;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 15px -3px rgba(30, 64, 175, 0.2);
-        }
-        .hero-banner h1 {
-            font-size: 2.5rem;
-            margin: 0 0 1rem 0;
-            font-weight: 800;
-        }
-        .hero-banner p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin: 0 0 2rem 0;
-        }
-        .hotline-badge {
-            display: inline-flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(4px);
-            padding: 0.5rem 1.25rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            color: white;
-            text-decoration: none;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            transition: all 0.2s ease;
-        }
-        .hotline-badge:hover {
-            background: white;
-            color: #1e40af;
-        }
-
-        /* Filter Controls */
-        .controls-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 2.5rem;
-        }
-        .search-input, .filter-select {
-            padding: 0.75rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 14px;
-            background: white;
-            outline: none;
-        }
-        .search-input:focus, .filter-select:focus {
-            border-color: #3b82f6;
-        }
-        @media (max-width: 768px) {
-            .controls-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* UI Native Buttons */
-        .btn {
-            background: #e2e8f0;
-            color: #334155;
-            border: none;
-            padding: 0.6rem 1.25rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-primary {
-            background: #1e40af;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #1d4ed8;
-        }
-
-        /* Commodity Grid Display */
-        .commodities-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
-        .commodity-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-        }
-        .commodity-card:hover {
+        .product-card:hover {
             transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
-        .card-img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            background: #f1f5f9;
+        /* Custom highlight styling for low stock units */
+        .low-stock-alert {
+            background: #fef2f2 !important;
+            border-color: #fca5a5 !important;
         }
-        .card-body {
-            padding: 1.25rem;
+        /* Support Section Integration Styles */
+        .support-container {
+            max-width: 600px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background: var(--bg-surface, #ffffff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         }
-
-        /* Order Pop-up Modal Window */
-        .order-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
+        /* Feedback & Ratings Section UI */
+        .feedback-section {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 5%;
         }
-        .modal-content {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            position: relative;
-        }
-        .close-modal {
-            position: absolute;
-            top: 1.25rem;
-            right: 1.25rem;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
+        .rating-stars {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0.5rem 0 1rem;
             cursor: pointer;
-            color: #64748b;
         }
-
-        /* Footer Helpdesk Split Grid */
-        .helpdesk-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 5rem;
-            background: white;
-            border: 1px solid #e2e8f0;
+        .star {
+            font-size: 1.5rem;
+            color: #cbd5e1;
+            transition: color 0.2s;
+        }
+        .star.active {
+            color: #f59e0b;
+        }
+        .comment-card {
+            background: var(--bg-surface, #ffffff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        /* Admin Monitoring Panel Dashboard Styles */
+        .admin-dashboard-container {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 2rem 5%;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
             border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
         }
-        @media (max-width: 768px) {
-            .helpdesk-section {
-                grid-template-columns: 1fr;
-            }
+        [data-theme="dark"] .admin-dashboard-container {
+            background: #1e293b;
+            border-color: #475569;
+        }
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        [data-theme="dark"] .dashboard-table {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        .dashboard-table th, .dashboard-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        [data-theme="dark"] .dashboard-table th, [data-theme="dark"] .dashboard-table td {
+            border-bottom-color: #334155;
+        }
+        .dashboard-table th {
+            background: #1e3a8a;
+            color: white;
         }
     </style>
 </head>
 <body>
 
-    <div class="portal-wrapper">
-        <header class="header-nav">
-            <h2 style="color: #1e40af; margin: 0; font-weight: 800; letter-spacing: -0.5px;">MWAMINI TRADING</h2>
-            <div style="display: flex; gap: 1rem;">
-                <button class="btn" id="theme-toggle">Theme</button>
-                <a href="admin.html" class="btn btn-primary" id="admin-login-link" style="text-decoration: none; text-align:center;">Admin Login</a>
-            </div>
-        </header>
-
-        <section class="hero-banner">
-            <h1>Premium Wholesale & Retail Commodities</h1>
-            <p>Real-time stock validation. Direct dispatch logistics.</p>
-            <a href="tel:" id="dynamic-hotline-btn" class="hotline-badge" style="display: none;">
-                📞 Call Direct: <span id="hotline-number-text">...</span>
-            </a>
-        </section>
-
-        <div class="controls-row">
-            <input type="text" id="search-bar" placeholder="Search across global inventory (e.g. Rice, Motor)..." class="search-input">
-            <select id="category-filter" class="filter-select">
-                <option value="All">All Categories</option>
-                <option value="Grains">Grains (Salt, Rice, Sugar)</option>
-                <option value="Agriculture">Agriculture & Farming Tools</option>
-                <option value="Construction">Construction Materials</option>
-                <option value="Electronics">Industrial Electronics</option>
-            </select>
-            <select id="currency-filter" class="filter-select">
-                <option value="USD">USD ($)</option>
-                <option value="RWF">RWF (RWF)</option>
-            </select>
+    <header>
+        <div class="brand-title">MWAMINI TRADING</div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <button id="theme-toggle" class="btn" style="width:auto; padding:0.5rem 1rem;">🌓 Theme</button>
+            <a href="login.html" class="btn btn-primary" style="text-decoration:none; font-size:14px; padding:0.5rem 1rem;">Admin Login</a>
         </div>
+    </header>
 
-        <main class="commodities-grid" id="public-commodities-view">
-        </main>
+    <section class="promo-banner" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 4rem 5%; text-align: center; border-bottom: 4px solid #10b981;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">Premium Wholesale & Retail Commodities</h1>
+        <p style="font-size: 1.1rem; opacity: 0.9;">Real-time stock validation. Direct dispatch logistics.</p>
+    </section>
 
-        <section class="helpdesk-section">
-            <div>
-                <h3 style="color: #1e3a8a; margin-top: 0;">Share Your Experience</h3>
-                <p style="font-size: 14px; color: #64748b; margin-bottom: 1.5rem;">Your high fidelity operational feedback sharpens our global supply lines.</p>
-                <form id="public-review-form">
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Your Name / Enterprise</label>
-                    <input type="text" id="rev-author" class="search-input" style="width:100%; margin-bottom:1rem;" required>
-                    
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Service Dispatch Rating</label>
-                    <select id="rev-rating" class="filter-select" style="width:100%; margin-bottom:1rem;">
-                        <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
-                        <option value="4">⭐⭐⭐⭐ 4 Stars</option>
-                        <option value="3">⭐⭐⭐ 3 Stars</option>
-                        <option value="2">⭐⭐ 2 Stars</option>
-                        <option value="1">⭐ 1 Star</option>
-                    </select>
+    <div class="search-filter-bar">
+        <input type="text" id="search-input" class="search-input" placeholder="Search across global inventory (e.g. Rice, Fertilizer)...">
+        
+        <select id="category-filter" class="filter-select">
+            <option value="All">All Categories</option>
+            <option value="Grains">Grains</option>
+            <option value="Agriculture">Agriculture</option>
+            <option value="Construction">Construction</option>
+            <option value="Electronics">Electronics</option>
+        </select>
 
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Verbatim Review Payload</label>
-                    <textarea id="rev-message" class="search-input" style="width:100%; height:80px; resize:none; margin-bottom:1.5rem;" required></textarea>
-                    
-                    <button type="submit" class="btn btn-primary" style="width:100%; margin:0;">Submit Platform Review</button>
-                </form>
-            </div>
-
-            <div>
-                <h3 style="color: #1e3a8a; margin-top: 0;">Secure Support Routing</h3>
-                <p style="font-size: 14px; color: #64748b; margin-bottom: 1.5rem;">Have questions on custom tariffs or cargo weights? Drop a digital ticket.</p>
-                <form id="helpdesk-ticket-form">
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Central Helpdesk Destination</label>
-                    <input type="text" id="ticket-target-email" class="search-input" style="width:100%; margin-bottom:1rem; background:#f1f5f9;" readonly value="Loading admin parameters...">
-                    
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Inquiry Core Subject</label>
-                    <input type="text" placeholder="e.g. Bulk Rice Logistics" class="search-input" style="width:100%; margin-bottom:1rem;" required>
-
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Detailed Request Message</label>
-                    <textarea class="search-input" style="width:100%; height:80px; resize:none; margin-bottom:1.5rem;" placeholder="Outline container dimensions required..." required></textarea>
-                    
-                    <button type="button" onclick="alert('Ticket successfully transmitted.')" class="btn btn-primary" style="width:100%; margin:0; background:#10b981;">Transmit Ticket to Helpdesk</button>
-                </form>
-            </div>
-        </section>
+        <select id="currency-select" class="filter-select" style="max-width: 150px;">
+            <option value="USD">🇺🇸 USD ($)</option>
+            <option value="RWF">🇷🇼 RWF (Fr)</option>
+            <option value="RUB">🇷🇺 RUB (₽)</option>
+        </select>
     </div>
 
-    <div class="order-modal" id="order-intake-modal">
-        <div class="modal-content">
-            <button class="close-modal" onclick="closeOrderModal()">&times;</button>
-            <h3 style="color: #1e3a8a; margin-top: 0; margin-bottom: 0.5rem;" id="modal-product-title">Coordinate Manifest Order</h3>
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 1.5rem;">Unit Base Cost: <span id="modal-product-price" style="font-weight: 700; color: #1e40af;"></span></p>
-            
-            <form id="modal-order-form">
-                <input type="hidden" id="modal-product-id">
-                <input type="hidden" id="modal-product-raw-title">
+    <main class="products-grid" id="products-container">
+    </main>
+
+    <section class="feedback-section">
+        <hr style="border: 0; border-top: 1px solid var(--border-color, #e2e8f0); margin-bottom: 3rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 3rem;">
+            <div>
+                <h3 style="color: #1e3a8a; margin-bottom: 0.5rem;">Client Service Reviews</h3>
+                <p style="font-size: 14px; color: #64748b; margin-bottom: 1.5rem;">Submit your fulfillment and cargo distribution ratings to our logistics managers.</p>
                 
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Target Acquisition Units</label>
-                <input type="number" id="modal-order-qty" value="1" min="1" class="search-input" style="width:100%; margin-bottom:1.25rem;" required>
+                <form id="public-review-form" style="background: var(--bg-surface, #fff); border: 1px solid var(--border-color, #e2e8f0); padding: 1.5rem; border-radius: 12px;">
+                    <label style="display:block; font-size: 14px; font-weight: 500;">Your Name</label>
+                    <input type="text" id="review-author" class="search-input" style="width:100%; margin-bottom:1rem;" placeholder="John Doe" required>
+                    
+                    <label style="display:block; font-size: 14px; font-weight: 500; margin-bottom: 0.25rem;">Quality & Dispatch Rating</label>
+                    <div class="rating-stars" id="review-stars-bucket">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                    </div>
+                    
+                    <label style="display:block; font-size: 14px; font-weight: 500;">Your Experience / Feedback</label>
+                    <textarea id="review-text" class="search-input" style="width:100%; height:80px; margin-bottom:1.5rem;" placeholder="Share your experience working with Mwamini Trading..." required></textarea>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Platform Review</button>
+                </form>
+            </div>
+            
+            <div>
+                <h4 style="margin-bottom: 1rem; font-weight: 600;">Recent Verified Client Feedback</h4>
+                <div id="comments-display-container">
+                </div>
+            </div>
+        </div>
+    </section>
 
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Your Name / Enterprise</label>
-                <input type="text" id="modal-order-customer" class="search-input" style="width:100%; margin-bottom:1.25rem;" placeholder="e.g. Acme Corp" required>
+    <section class="admin-dashboard-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+                <h3 style="color: #1e3a8a; margin: 0;">Mainframe Feedback Control Center</h3>
+                <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">Live tracking stream of customer rating markers and text payloads.</p>
+            </div>
+            <button onclick="fetchAndRenderPlatformReviews()" class="btn" style="width: auto; padding: 0.5rem 1rem; font-size: 12px; background: #e2e8f0; color: black;">🔄 Force Sync</button>
+        </div>
+        
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Client Name</th>
+                    <th>Rating Status</th>
+                    <th>Verbatim Feedback Message</th>
+                </tr>
+            </thead>
+            <tbody id="admin-dashboard-rows">
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #64748b; padding: 2rem;">Connecting real-time admin monitoring grids...</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
 
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Contact Phone Number</label>
-                <input type="tel" id="modal-order-phone" class="search-input" style="width:100%; margin-bottom:1.25rem;" placeholder="e.g. +250..." required>
+    <section class="support-container">
+        <h3 style="margin-bottom: 1rem; color: #1e3a8a;">Contact Client Support Helpdesk</h3>
+        <p style="font-size: 14px; color: #64748b; margin-bottom: 1.5rem;">Have questions about your wholesale order or cargo shipments? Transmit your query directly to our admins via email client routing.</p>
+        <form id="public-support-form">
+            <label style="display:block; margin-bottom: 0.25rem; font-size: 14px; font-weight: 500;">Your Registered Email Address</label>
+            <input type="email" id="support-email" class="search-input" style="width:100%; margin-bottom:1rem;" placeholder="client@domain.com" required>
+            
+            <label style="display:block; margin-bottom: 0.25rem; font-size: 14px; font-weight: 500;">Inquiry Subject</label>
+            <input type="text" id="support-subject" class="search-input" style="width:100%; margin-bottom:1rem;" placeholder="Delivery Delay, Custom Invoice Request..." required>
+            
+            <label style="display:block; margin-bottom: 0.25rem; font-size: 14px; font-weight: 500;">Message</label>
+            <textarea id="support-message" class="search-input" style="width:100%; height:100px; margin-bottom:1.5rem;" placeholder="Detail your freight specifications or issues here..." required></textarea>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Transmit Ticket to Helpdesk</button>
+        </form>
+    </section>
 
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:0.5rem;">Delivery Destination / Offload Address</label>
-                <textarea id="modal-order-address" class="search-input" style="width:100%; height:60px; resize:none; margin-bottom:1.5rem;" placeholder="e.g. Mwamini Warehouse Sector 4, Kigali" required></textarea>
+    <div class="modal" id="order-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content" style="position: relative; padding: 2.5rem; background: var(--bg-surface, #fff); width: 90%; max-width: 500px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <button type="button" onclick="closeOrderModal()" style="position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" title="Close Panel">✕</button>
 
-                <button type="submit" class="btn btn-primary" style="width:100%; margin:0; padding:0.75rem;">Confirm Freight Requisition</button>
+            <h3 style="margin-bottom: 1.5rem; padding-right: 2rem;" id="modal-product-title">Place Order Submission</h3>
+            <form id="order-submission-form">
+                <input type="hidden" id="form-product-id">
+                <input type="hidden" id="form-product-title-val">
+                
+                <label style="display:block; margin: 0.5rem 0 0.25rem;">Full Name</label>
+                <input type="text" id="cust-name" class="search-input" style="width:100%; margin-bottom:1rem;" required>
+                
+                <label style="display:block; margin: 0.5rem 0 0.25rem;">Phone Number (WhatsApp Active)</label>
+                <input type="tel" id="cust-phone" class="search-input" style="width:100%; margin-bottom:1rem;" required>
+                
+                <label style="display:block; margin: 0.5rem 0 0.25rem;">Quantity Requested</label>
+                <input type="number" id="cust-qty" value="1" min="1" class="search-input" style="width:100%; margin-bottom:1rem;" required>
+                
+                <label style="display:block; margin: 0.5rem 0 0.25rem;">Delivery Destination / Hub</label>
+                <input type="text" id="cust-location" class="search-input" style="width:100%; margin-bottom:1rem;" required>
+                
+                <label style="display:block; margin: 0.5rem 0 0.25rem;">Special Notes or Freight Requests</label>
+                <textarea id="cust-notes" class="search-input" style="width:100%; height:80px; margin-bottom:1.5rem;"></textarea>
+                
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 2;">Authorize & Transmit Order</button>
+                    <button type="button" class="btn" style="background:#e2e8f0; color: black; flex: 1;" onclick="closeOrderModal()">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
 
     <script src="supabase-config.js"></script>
     <script>
-        let availableCommodities = [];
-        const fxAnchorRates = { USD: 1, RWF: 1290 };
+        let localProductsCache = [];
+        let selectedRatingValue = 5;
+        let globalSupportEmailTarget = "support@mwamini-trading.com"; 
+        const exchangeRates = { USD: 1, RWF: 1290, RUB: 91.5 }; 
 
         document.addEventListener("DOMContentLoaded", () => {
-            // SAFE ADMINISTRATIVE REDIRECT HANDLING
-            const adminBtn = document.getElementById("admin-login-link");
-            if (adminBtn) {
-                adminBtn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    window.location.href = "admin.html";
-                });
-            }
-
-            pullSystemConfigurationVariables();
-            fetchPublicCommodities();
-
-            // EVENT LISTENERS FOR SEARCH AND FILTER ENGINE
-            document.getElementById("search-bar")?.addEventListener("input", runFilteringPipeline);
-            document.getElementById("category-filter")?.addEventListener("change", runFilteringPipeline);
-            document.getElementById("currency-filter")?.addEventListener("change", runFilteringPipeline);
-
-            document.getElementById("public-review-form")?.addEventListener("submit", forwardClientReview);
-            document.getElementById("modal-order-form")?.addEventListener("submit", processModalOrderPlacement);
+            initializePublicCatalog();
+            setupSearchFilters();
+            setupSupportEmailClient();
+            initializeOrderFulfillmentEngine();
+            initializeReviewsSystem();
+            fetchSystemRoutingProfile();
         });
 
-        async function pullSystemConfigurationVariables() {
+        // Pull active admin-configured variables dynamically
+        async function fetchSystemRoutingProfile() {
             if (!window.supabase) return;
-            try {
-                const { data, error } = await window.supabase.from('system_settings').select('*').single();
-                if (!error && data) {
-                    if (data.support_phone) {
-                        document.getElementById("dynamic-hotline-btn").href = `tel:${data.support_phone}`;
-                        document.getElementById("hotline-number-text").innerText = data.support_phone;
-                        document.getElementById("dynamic-hotline-btn").style.display = "inline-flex";
-                    }
-                    if (data.support_email) {
-                        document.getElementById("ticket-target-email").value = data.support_email;
-                    }
+            const { data, error } = await window.supabase.from('system_settings').select('*').limit(1);
+            if (!error && data && data.length > 0) {
+                if (data[0].support_email) {
+                    globalSupportEmailTarget = data[0].support_email;
                 }
-            } catch(e) { console.error("Error configuration settings load:", e); }
+            }
         }
 
-        async function fetchPublicCommodities() {
-            const container = document.getElementById("public-commodities-view");
+        async function initializePublicCatalog() {
+            const container = document.getElementById("products-container");
+            if (!window.supabase || !container) return;
+
+            container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding: 3rem; color: #64748b;">Syncing distribution catalog matrix...</p>`;
+
+            const { data, error } = await window.supabase
+                .from('products')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding: 3rem; color: #ef4444;">Sync Error: ${error.message}</p>`;
+                return;
+            }
+
+            localProductsCache = data || [];
+            renderCatalogGrid(localProductsCache);
+            initializeRealtimeCatalogUpdates();
+        }
+
+        function renderCatalogGrid(productsList) {
+            const container = document.getElementById("products-container");
+            const targetCurrency = document.getElementById("currency-select").value;
+            if (!container) return;
+
+            if (productsList.length === 0) {
+                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding: 3rem; color: #64748b;">No matching commodities found inside current view parameters.</p>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            productsList.forEach(item => {
+                const hasRwfTag = item.description && item.description.includes("[CURRENCY:RWF]");
+                const hasRubTag = item.description && item.description.includes("[CURRENCY:RUB]");
+                const sourceCurrency = hasRwfTag ? "RWF" : (hasRubTag ? "RUB" : "USD");
+
+                const priceInUSD = item.price / exchangeRates[sourceCurrency];
+                const convertedPrice = priceInUSD * exchangeRates[targetCurrency];
+
+                let currencySymbol = "$";
+                if (targetCurrency === "RWF") currencySymbol = "RWF ";
+                if (targetCurrency === "RUB") currencySymbol = "₽";
+
+                const cleanDescription = item.description ? item.description.replace(/\[CURRENCY:\w+\]/g, "").trim() : "";
+                const isLowStock = (item.quantity <= 3);
+                const lowStockClass = isLowStock ? "low-stock-alert" : "";
+
+                let finalMediaUrl = "https://via.placeholder.com/400x300?text=No+Asset+Selected";
+                if (item.image_url) {
+                    finalMediaUrl = item.image_url.startsWith('http') 
+                        ? item.image_url 
+                        : item.image_url;
+                }
+
+                const cardNode = document.createElement("div");
+                cardNode.className = `product-card ${lowStockClass}`;
+                cardNode.style = "background: var(--bg-surface, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;";
+                
+                cardNode.innerHTML = `
+                    <div style="position: relative; height: 200px; background: #f1f5f9;">
+                        <img src="${finalMediaUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/400x300?text=Asset+Link+Error'">
+                        <span style="position: absolute; top: 0.75rem; right: 0.75rem; background: ${isLowStock ? '#ef4444' : '#1e3a8a'}; color: white; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;">
+                            ${item.stock_status || 'In Stock'} (${item.quantity} units)
+                        </span>
+                    </div>
+                    <div style="padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span style="font-size: 11px; text-transform: uppercase; font-weight:700; color: #3b82f6;">${item.category}</span>
+                            <h4 style="font-size: 18px; margin: 0.25rem 0 0.5rem; font-weight: 600;">${item.title}</h4>
+                            <p style="font-size: 13px; color: #64748b; margin-bottom: 1rem; line-height: 1.4;">${cleanDescription || 'No description listed.'}</p>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
+                            <span style="font-size: 20px; font-weight: 700; color: #10b981;">${currencySymbol}${Math.round(convertedPrice).toLocaleString()}</span>
+                            <button class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 13px;" onclick="openOrderModal('${item.id}', '${item.title.replace(/'/g, "\\'")}')">Order</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(cardNode);
+            });
+        }
+
+        function initializeOrderFulfillmentEngine() {
+            const orderForm = document.getElementById("order-submission-form");
+            if (!orderForm) return;
+
+            orderForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const productId = document.getElementById("form-product-id").value;
+                const productTitle = document.getElementById("form-product-title-val").value;
+                const customerName = document.getElementById("cust-name").value;
+                const customerPhone = document.getElementById("cust-phone").value;
+                const requestedQty = parseInt(document.getElementById("cust-qty").value, 10);
+                const deliveryLocation = document.getElementById("cust-location").value;
+                const deliveryNotes = document.getElementById("cust-notes").value;
+
+                const targetedProduct = localProductsCache.find(p => p.id === productId);
+                if (!targetedProduct || targetedProduct.quantity < requestedQty) {
+                    alert(`Fulfillment Error: Insufficient stock registry available. Only ${targetedProduct ? targetedProduct.quantity : 0} units remain.`);
+                    return;
+                }
+
+                const { error: orderError } = await window.supabase
+                    .from('orders')
+                    .insert([{
+                        product_title: productTitle,
+                        customer_name: customerName,
+                        phone_number: customerPhone,
+                        quantity: requestedQty,
+                        delivery_location: deliveryLocation,
+                        status: 'Pending'
+                    }]);
+
+                if (orderError) {
+                    alert(`Logistics routing failed: ${orderError.message}`);
+                    return;
+                }
+
+                const modernUpdatedQty = targetedProduct.quantity - requestedQty;
+                const dynamicStatusString = modernUpdatedQty === 0 ? 'Out of stock' : (modernUpdatedQty <= 3 ? 'Limited stock' : (targetedProduct.stock_status || 'In Stock'));
+
+                await window.supabase
+                    .from('products')
+                    .update({ quantity: modernUpdatedQty, stock_status: dynamicStatusString })
+                    .eq('id', productId);
+
+                alert("Transaction Processed! Your order has reached the dispatch mainframe board successfully.");
+                closeOrderModal();
+                orderForm.reset();
+            });
+        }
+
+        function initializeReviewsSystem() {
+            const stars = document.querySelectorAll("#review-stars-bucket .star");
+            stars.forEach(s => {
+                s.addEventListener("click", (e) => {
+                    selectedRatingValue = parseInt(e.target.getAttribute("data-value"), 10);
+                    stars.forEach((star, index) => {
+                        star.classList.toggle("active", index < selectedRatingValue);
+                    });
+                });
+            });
+
+            stars.forEach((star, index) => star.classList.toggle("active", index < selectedRatingValue));
+
+            const reviewForm = document.getElementById("public-review-form");
+            reviewForm?.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const author = document.getElementById("review-author").value;
+                const feedback = document.getElementById("review-text").value;
+
+                const { error } = await window.supabase
+                    .from('reviews')
+                    .insert([{ author: author, rating: selectedRatingValue, feedback: feedback }]);
+
+                if (error) {
+                    renderLocalCommentFallback(author, selectedRatingValue, feedback);
+                } else {
+                    fetchAndRenderPlatformReviews();
+                }
+
+                reviewForm.reset();
+                selectedRatingValue = 5;
+                stars.forEach((star, index) => star.classList.toggle("active", index < selectedRatingValue));
+            });
+
+            fetchAndRenderPlatformReviews();
+            initializeRealtimeReviewChannel();
+        }
+
+        async function fetchAndRenderPlatformReviews() {
+            const container = document.getElementById("comments-display-container");
+            const adminTableBody = document.getElementById("admin-dashboard-rows");
             if (!container || !window.supabase) return;
 
-            const { data, error } = await window.supabase.from('products').select('*');
-            if (error || !data) {
-                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:#64748b;">Unable to fetch inventory items matrix.</p>`;
-                return;
-            }
-
-            availableCommodities = data;
-            runFilteringPipeline();
-        }
-
-        function runFilteringPipeline() {
-            const searchQuery = document.getElementById("search-bar")?.value.toLowerCase().trim() || "";
-            const activeCategory = document.getElementById("category-filter")?.value || "All";
+            const { data, error } = await window.supabase.from('reviews').select('*').order('created_at', { ascending: false });
             
-            const filtered = availableCommodities.filter(item => {
-                const matchesSearch = item.title?.toLowerCase().includes(searchQuery) || 
-                                      (item.description && item.description.toLowerCase().includes(searchQuery));
-                const matchesCategory = (activeCategory === "All" || item.category === activeCategory);
-                return matchesSearch && matchesCategory;
-            });
-
-            renderCommoditiesManifest(filtered);
-        }
-
-        function renderCommoditiesManifest(items) {
-            const container = document.getElementById("public-commodities-view");
-            if (!container) return;
-            container.innerHTML = "";
-
-            if (items.length === 0) {
-                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:#64748b; padding: 3rem;">No matching commodities found inside current view parameters.</p>`;
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `
+                    <div class="comment-card">
+                        <strong>Logistics Supervisor</strong>
+                        <div style="color:#f59e0b; margin: 4px 0;">★★★★★</div>
+                        <p style="font-size:13px; color:#64748b; margin:0;">Distribution channels running fully synchronized.</p>
+                    </div>`;
+                if (adminTableBody) {
+                    adminTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">No review data objects located in remote table storage.</td></tr>`;
+                }
                 return;
             }
 
-            const activeDisplayCurrency = document.getElementById("currency-filter")?.value || "USD";
+            container.innerHTML = "";
+            if (adminTableBody) adminTableBody.innerHTML = "";
 
-            items.forEach(product => {
-                // Determine source currency tag from specialized text payload metadata
-                const originalIsRwf = product.description && product.description.includes("[CURRENCY:RWF]");
-                const parsedCleanDescription = product.description ? product.description.replace(/\[CURRENCY:\w+\]/g, "").trim() : "";
+            data.forEach(rev => {
+                const starsDisplay = "★".repeat(rev.rating || 5) + "☆".repeat(5 - (rev.rating || 5));
+                const timestamp = rev.created_at ? new Date(rev.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just Now';
                 
-                let basePriceInUSD = originalIsRwf ? (product.price / fxAnchorRates.RWF) : product.price;
-                let evaluationPrice = activeDisplayCurrency === "RWF" ? (basePriceInUSD * fxAnchorRates.RWF) : basePriceInUSD;
-                
-                let currencySymbol = activeDisplayCurrency === "RWF" ? "RWF" : "$";
-                let formattedPrice = Math.round(evaluationPrice).toLocaleString();
-
                 container.innerHTML += `
-                    <div class="commodity-card">
-                        <img src="${product.image_url || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=500&q=80'}" class="card-img" alt="media">
-                        <div class="card-body">
-                            <span style="font-size:11px; text-transform:uppercase; color:#3b82f6; font-weight:700;">${product.category}</span>
-                            <h4 style="margin: 0.25rem 0 0.5rem 0; font-size:18px;">${product.title || 'Commodity Data'}</h4>
-                            <p style="font-size:13px; color:#64748b; margin:0 0 1rem 0; height:36px; overflow:hidden;">${parsedCleanDescription || 'No custom description defined.'}</p>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-size:18px; font-weight:700; color:#1e40af;">${formattedPrice} ${currencySymbol}</span>
-                                <button class="btn btn-primary" style="margin:0; padding:0.4rem 1rem; font-size:13px;" onclick="triggerOrderModal('${product.id}', '${product.title.replace(/'/g, "\\'")}', '${formattedPrice}', '${currencySymbol}')">Order</button>
-                            </div>
-                        </div>
+                    <div class="comment-card">
+                        <strong>${rev.author || 'Anonymous'}</strong>
+                        <div style="color:#f59e0b; margin: 4px 0; font-size:13px;">${starsDisplay}</div>
+                        <p style="font-size:13px; color:#64748b; margin:0;">${rev.feedback || ''}</p>
                     </div>`;
+                
+                if (adminTableBody) {
+                    adminTableBody.innerHTML += `
+                        <tr>
+                            <td style="font-size:12px; color:#64748b; font-family:monospace;">${timestamp}</td>
+                            <td style="font-weight:600;">${rev.author || 'Anonymous'}</td>
+                            <td style="color:#f59e0b; font-size:13px; letter-spacing:1px;">${starsDisplay}</td>
+                            <td style="font-size:13px; color:#334155;">${rev.feedback || ''}</td>
+                        </tr>`;
+                }
             });
         }
 
-        function triggerOrderModal(id, title, price, currency) {
-            document.getElementById("modal-product-id").value = id;
-            document.getElementById("modal-product-raw-title").value = title;
-            document.getElementById("modal-product-title").innerText = `Order ${title}`;
-            document.getElementById("modal-product-price").innerText = `${price} ${currency}`;
-            document.getElementById("order-intake-modal").style.display = "flex";
+        function renderLocalCommentFallback(author, rating, text) {
+            const container = document.getElementById("comments-display-container");
+            const adminTableBody = document.getElementById("admin-dashboard-rows");
+            const starsDisplay = "★".repeat(rating) + "☆".repeat(5 - rating);
+            
+            const fallbackCard = `
+                <div class="comment-card">
+                    <strong>${author} (Local Cache)</strong>
+                    <div style="color:#f59e0b; margin: 4px 0; font-size:13px;">${starsDisplay}</div>
+                    <p style="font-size:13px; color:#64748b; margin:0;">${text}</p>
+                </div>`;
+            container.insertAdjacentHTML('afterbegin', fallbackCard);
+
+            if (adminTableBody) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-size:12px; color:#ef4444; font-family:monospace;">Sync Pending</td>
+                    <td style="font-weight:600;">${author}</td>
+                    <td style="color:#f59e0b; font-size:13px;">${starsDisplay}</td>
+                    <td style="font-size:13px; color:#64748b; font-style:italic;">${text}</td>`;
+                adminTableBody.insertBefore(tr, adminTableBody.firstChild);
+            }
         }
 
-        function closeOrderModal() {
-            document.getElementById("order-intake-modal").style.display = "none";
-            document.getElementById("modal-order-form").reset();
-        }
+        function setupSearchFilters() {
+            const searchInput = document.getElementById("search-input");
+            const categoryFilter = document.getElementById("category-filter");
+            const currencySelect = document.getElementById("currency-select");
 
-        async function processModalOrderPlacement(e) {
-            e.preventDefault();
-            if (!window.supabase) return;
+            const triggerFilterExecution = () => {
+                const searchVal = searchInput.value.toLowerCase().trim();
+                const categoryVal = categoryFilter.value;
 
-            const productId = document.getElementById("modal-product-id").value;
-            const productTitle = document.getElementById("modal-product-raw-title").value;
-            const quantity = parseInt(document.getElementById("modal-order-qty").value);
-            const customerName = document.getElementById("modal-order-customer").value.trim();
-            const phoneNumber = document.getElementById("modal-order-phone").value.trim();
-            const destination = document.getElementById("modal-order-address").value.trim();
+                const filtered = localProductsCache.filter(prod => {
+                    const matchesSearch = prod.title.toLowerCase().includes(searchVal) || 
+                                          (prod.description && prod.description.toLowerCase().includes(searchVal));
+                    const matchesCategory = categoryVal === "All" ? true : (prod.category === categoryVal);
+                    return matchesSearch && matchesCategory;
+                });
 
-            const orderPayload = {
-                product_id: productId,
-                product_title: productTitle,
-                quantity: quantity,
-                customer_name: customerName,
-                phone_number: phoneNumber,
-                delivery_location: destination,
-                status: "Pending"
+                renderCatalogGrid(filtered);
             };
 
-            const { error } = await window.supabase.from('orders').insert([orderPayload]);
-
-            if (!error) {
-                alert(`Requisition broadcast complete!\nYour request for ${quantity}x "${productTitle}" has been queued dynamically.`);
-                closeOrderModal();
-            } else {
-                alert(`Failed to route order pipeline: ${error.message}`);
-            }
+            searchInput.addEventListener("input", triggerFilterExecution);
+            categoryFilter.addEventListener("change", triggerFilterExecution);
+            currencySelect.addEventListener("change", () => renderCatalogGrid(localProductsCache));
         }
 
-        async function forwardClientReview(e) {
-            e.preventDefault();
+        function setupSupportEmailClient() {
+            document.getElementById("public-support-form")?.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const userEmail = document.getElementById("support-email").value;
+                const subject = document.getElementById("support-subject").value;
+                const message = document.getElementById("support-message").value;
+
+                const bodyText = `Sender Reference Address: ${userEmail}\n\nMessage Payload:\n${message}`;
+                const mailtoLink = `mailto:${globalSupportEmailTarget}?subject=${encodeURIComponent('[PORTAL HELP] ' + subject)}&body=${encodeURIComponent(bodyText)}`;
+                window.location.href = mailtoLink;
+            });
+        }
+
+        function initializeRealtimeCatalogUpdates() {
             if (!window.supabase) return;
-
-            const author = document.getElementById("rev-author").value.trim();
-            const rating = parseInt(document.getElementById("rev-rating").value);
-            const feedback = document.getElementById("rev-message").value.trim();
-
-            const { error } = await window.supabase.from('reviews').insert([{ author, rating, feedback }]);
-            if (error) {
-                alert("Could not append review message payload.");
-            } else {
-                alert("Review log generated successfully.");
-                document.getElementById("public-review-form").reset();
-            }
+            window.supabase.channel('public-products-channel')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
+                    const { data } = await window.supabase.from('products').select('*').order('created_at', { ascending: false });
+                    if (data) {
+                        localProductsCache = data;
+                        renderCatalogGrid(localProductsCache);
+                    }
+                })
+                .subscribe();
         }
+
+        function initializeRealtimeReviewChannel() {
+            if (!window.supabase) return;
+            window.supabase.channel('public-reviews-channel')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews' }, () => {
+                    fetchAndRenderPlatformReviews();
+                })
+                .subscribe();
+        }
+
+        window.openOrderModal = function(id, title) {
+            const modal = document.getElementById('order-modal');
+            if(!modal) return;
+            
+            document.getElementById('form-product-id').value = id;
+            document.getElementById('form-product-title-val').value = title;
+            document.getElementById('modal-product-title').innerText = `Place Order Submission: ${title}`;
+            modal.style.display = 'flex';
+        };
+
+        window.closeOrderModal = function() {
+            const modal = document.getElementById('order-modal');
+            if(modal) modal.style.display = 'none';
+        };
+
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const root = document.documentElement;
+            const current = root.getAttribute('data-theme');
+            root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        });
     </script>
 </body>
 </html>
