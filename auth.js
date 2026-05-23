@@ -1,106 +1,92 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    // --- HIGH-SECURITY GATEKEEPER LOGIC ---
-    const gatekeeperStep = document.getElementById("gatekeeper-step");
-    const loginForm = document.getElementById("login-form") || document.querySelector("form");
+    // UI Elements
+    const gatekeeperStep = document.getElementById("gatekeeper-step"); // Popup Screen Verification
+    const loginForm = document.getElementById("login-form");          // Admin Verification Dashboard
     const errorMsg = document.getElementById("error-msg");
     const verifyKeyBtn = document.getElementById("verify-key-btn");
     const accessKeyInput = document.getElementById("access-key");
 
-    // FORCE CLEANUP: Ensure no stale session exists on page load
-    if (window.supabase) {
-        await window.supabase.auth.signOut();
-        localStorage.clear();
-        sessionStorage.clear();
+    /**
+     * SYSTEM OVERSEER: Global Security Sanitization
+     * Ensures no "ghost" sessions remain in the browser memory.
+     */
+    const performSystemPurge = async () => {
+        if (window.supabase) {
+            await window.supabase.auth.signOut();
+            sessionStorage.clear();
+            localStorage.clear();
+        }
+    };
+
+    // Initialize: Purge on any entry to the secure login environment
+    if (window.location.pathname.includes("login.html")) {
+        await performSystemPurge();
     }
 
+    /**
+     * SCREEN 1: Popup Screen Verification
+     * The first "Gateway" for Mwamini Portal access.
+     */
     if (verifyKeyBtn) {
         verifyKeyBtn.addEventListener("click", () => {
             const key = accessKeyInput.value.trim();
             if (key === "Password@654321") {
+                // Transition to Admin Verification Dashboard
                 gatekeeperStep.style.display = "none";
                 loginForm.style.display = "block";
-                accessKeyInput.value = ""; // Scrub key from memory
+                accessKeyInput.value = ""; 
                 if (errorMsg) errorMsg.innerText = "";
             } else {
-                if (errorMsg) {
-                    errorMsg.style.color = "#ef4444";
-                    errorMsg.innerText = "Security violation: Invalid access key.";
-                }
+                errorMsg.innerText = "Access Denied: Security Key Mismatch.";
+                errorMsg.style.color = "#ef4444";
             }
         });
     }
 
-    // --- ENHANCED AUTH LOGIC ---
+    /**
+     * SCREEN 2: Admin Verification Dashboard
+     * Official authentication via Supabase.
+     */
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            
-            if (errorMsg) {
-                errorMsg.style.color = "#2563eb";
-                errorMsg.innerText = "Establishing secure handshake...";
-            }
+            errorMsg.innerText = "Authenticating credentials...";
+            errorMsg.style.color = "#2563eb";
 
-            if (!window.supabase || typeof window.supabase.auth === 'undefined') {
-                if (errorMsg) {
-                    errorMsg.style.color = "#ef4444";
-                    errorMsg.innerText = "System Error: Authentication client unreachable.";
-                }
-                return;
-            }
-
-            const emailInput = loginForm.querySelector("input[type='email']");
-            const passwordInput = loginForm.querySelector("input[type='password']");
-
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
+            const email = loginForm.querySelector("input[type='email']").value.trim();
+            const password = loginForm.querySelector("input[type='password']").value;
 
             try {
-                const { data, error } = await window.supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (error) {
-                    if (errorMsg) {
-                        errorMsg.style.color = "#ef4444";
-                        errorMsg.innerText = `Auth Fail: ${error.message}`;
-                    }
-                } else if (data?.user) {
-                    if (errorMsg) {
-                        errorMsg.style.color = "#10b981";
-                        errorMsg.innerText = "Credentials verified. Initializing session...";
-                    }
-                    setTimeout(() => {
-                        window.location.replace("admin.html");
-                    }, 800);
-                }
+                const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                
+                errorMsg.innerText = "Access verified. Initializing System Overseer...";
+                errorMsg.style.color = "#10b981";
+                
+                setTimeout(() => window.location.replace("admin.html"), 1000);
             } catch (err) {
-                if (errorMsg) {
-                    errorMsg.style.color = "#ef4444";
-                    errorMsg.innerText = "Secure connection failed.";
-                }
+                errorMsg.innerText = `Auth Failed: ${err.message}`;
+                errorMsg.style.color = "#ef4444";
             }
         });
     }
 
-    // --- SECURE SESSION VERIFICATION ---
+    /**
+     * DASHBOARD 3 & 4: Admin System Overseer
+     * Validates session for the high-privilege dashboard.
+     */
     if (window.location.pathname.includes("admin.html")) {
-        const verifySession = async () => {
+        const validateSession = async () => {
             if (!window.supabase) return;
             const { data: { session } } = await window.supabase.auth.getSession();
-            if (!session) {
-                window.location.replace("login.html");
-            }
+            if (!session) window.location.replace("login.html");
         };
-        verifySession();
+        validateSession();
 
+        // Admin Logout: Full System Reset
         document.getElementById("logout-btn")?.addEventListener("click", async () => {
-            if (window.supabase) {
-                await window.supabase.auth.signOut();
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.replace("login.html");
-            }
+            await performSystemPurge();
+            window.location.replace("login.html");
         });
     }
 });
