@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // --- HIGH-SECURITY GATEKEEPER LOGIC ---
     const gatekeeperStep = document.getElementById("gatekeeper-step");
     const loginForm = document.getElementById("login-form") || document.querySelector("form");
@@ -6,10 +6,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const verifyKeyBtn = document.getElementById("verify-key-btn");
     const accessKeyInput = document.getElementById("access-key");
 
+    // FORCE CLEANUP: Ensure no stale session exists on page load
+    if (window.supabase) {
+        await window.supabase.auth.signOut();
+        localStorage.clear();
+        sessionStorage.clear();
+    }
+
     if (verifyKeyBtn) {
         verifyKeyBtn.addEventListener("click", () => {
             const key = accessKeyInput.value.trim();
-            // Using a simple constant-time comparison approach for the key
             if (key === "Password@654321") {
                 gatekeeperStep.style.display = "none";
                 loginForm.style.display = "block";
@@ -45,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const emailInput = loginForm.querySelector("input[type='email']");
             const passwordInput = loginForm.querySelector("input[type='password']");
 
-            // Sanitize inputs
             const email = emailInput.value.trim();
             const password = passwordInput.value;
 
@@ -65,7 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         errorMsg.style.color = "#10b981";
                         errorMsg.innerText = "Credentials verified. Initializing session...";
                     }
-                    // Small delay to prevent brute-force timing attacks
                     setTimeout(() => {
                         window.location.replace("admin.html");
                     }, 800);
@@ -90,12 +94,11 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         verifySession();
 
-        // Logout securely
         document.getElementById("logout-btn")?.addEventListener("click", async () => {
             if (window.supabase) {
                 await window.supabase.auth.signOut();
-                // Clear all local storage keys to ensure clean logout
                 localStorage.clear();
+                sessionStorage.clear();
                 window.location.replace("login.html");
             }
         });
